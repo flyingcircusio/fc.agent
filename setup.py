@@ -1,12 +1,9 @@
 from setuptools import setup, find_packages
 import os
 
-with open(os.path.join(os.path.dirname(__file__), 'version.txt')) as f:
-    version = f.read().strip()
-
 setup(
     name='fc.agent',
-    version=version,
+    version='1.3.4dev0',
     author='gocept',
     author_email='mail@gocept.com',
     url='http://bitbucket.org/flyingcircus/fc.agent/',
