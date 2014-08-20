@@ -3,7 +3,7 @@ import os
 
 setup(
     name='fc.agent',
-    version='1.3.4',
+    version='1.3.5.dev0',
     author='gocept',
     author_email='mail@gocept.com',
     url='http://bitbucket.org/flyingcircus/fc.agent/',
