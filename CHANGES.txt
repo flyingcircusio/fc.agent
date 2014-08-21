@@ -1,0 +1,10 @@
+Changelog
+=========
+
+1.3.5 (unreleased)
+------------------
+
+* Do not try to inmigrate VMs that should be running and *are* running already.
+
+* Adapt test setup to py.test after moving to separate repository and
+  get all tests green.

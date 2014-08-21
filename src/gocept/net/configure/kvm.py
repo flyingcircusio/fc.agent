@@ -40,13 +40,14 @@ def call(*cmd):
 
 class VM(object):
 
-    pidfile = '/run/kvm.{name}.pid'
-    confdfile = '/etc/conf.d/kvm.{name}'
-    configfile = '/etc/kvm/{name}.cfg'
-    optfile = '/etc/kvm/{name}.opt'
-    initfile = '/etc/init.d/kvm.{name}'
-    runlevelfile = '/etc/runlevels/default/kvm.{name}'
-    chroot = '/srv/vm/{name}'
+    root = ''
+    pidfile = '{root}/run/kvm.{name}.pid'
+    confdfile = '{root}/etc/conf.d/kvm.{name}'
+    configfile = '{root}/etc/kvm/{name}.cfg'
+    optfile = '{root}/etc/kvm/{name}.opt'
+    initfile = '{root}/etc/init.d/kvm.{name}'
+    runlevelfile = '{root}/etc/runlevels/default/kvm.{name}'
+    chroot = '{root}/srv/vm/{name}'
 
     def __init__(self, enc, this_kvm_host=KVM_HOST):
         self.name = enc['name']
@@ -57,7 +58,8 @@ class VM(object):
 
         for attr in ['pidfile', 'confdfile', 'initfile', 'runlevelfile',
                      'optfile', 'configfile', 'chroot']:
-            setattr(self, attr, getattr(self, attr).format(**enc))
+            setattr(self, attr, getattr(self, attr).format(
+                root=self.root,**enc))
 
     def ensure(self):
         self.write_confd_file()

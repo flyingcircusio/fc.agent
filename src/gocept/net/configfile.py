@@ -49,7 +49,11 @@ class ConfigFile(object):
         outfile.truncate()
         outfile.write(self.io.getvalue())
         outfile.flush()
-        os.fdatasync(outfile)
+        if hasattr(os, 'fdatasync'):
+            os.fdatasync(outfile)
+        else:
+            # OS X
+            fcntl.fcntl(outfile, fcntl.F_FULLFSYNC)
         self.changed = True
 
     def _update(self):

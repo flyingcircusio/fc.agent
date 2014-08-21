@@ -87,6 +87,7 @@ class ReqManager(object):
     def _allocate_id(self):
         """Get a new unique request id using a SEQ file."""
         with open(os.path.join(self.spooldir, '.SEQ'), 'a+') as f:
+            f.seek(0)  # On OS X a+ starts at the end of the file.
             fcntl.lockf(f.fileno(), fcntl.LOCK_EX)
             oldseq = f.readline()
             if not oldseq:
