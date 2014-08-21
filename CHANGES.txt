@@ -8,3 +8,6 @@ Changelog
 
 * Adapt test setup to py.test after moving to separate repository and
   get all tests green.
+
+* Extract computation of tmp and swap volumes from init script so we can test
+  them and make them more robust for migration.
