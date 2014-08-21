@@ -129,7 +129,7 @@ KVM_OPTIONS="\
       -m {memory}\
       -watchdog i6300esb\
       -watchdog-action reset\
-      -readconfig {configfile}\
+      -readconfig /run/kvm.{name}.cfg\
 "
 SWAPSIZE="{swap}"
 TMPSIZE="{tmp}"

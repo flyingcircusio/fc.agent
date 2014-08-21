@@ -4,7 +4,9 @@ Changelog
 1.3.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Bugfix: the actual config file we pass to qemu is the shell-expanded one in
+  /run/kvm.*.cfg. The last refactoring accidentally pointed it to the template
+  in /etc/kvm/.
 
 
 1.3.5 (2014-08-21)

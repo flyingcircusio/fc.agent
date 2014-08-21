@@ -167,10 +167,10 @@ KVM_OPTIONS="\
       -m 512\
       -watchdog i6300esb\
       -watchdog-action reset\
-      -readconfig {cfg}"
+      -readconfig /run/kvm.test00.cfg"
 SWAPSIZE="768"
 TMPSIZE="5120"
-""".format(chroot=vm.chroot, pid=vm.pidfile, cfg=vm.configfile) == open(vm.optfile, 'r').read()
+""".format(chroot=vm.chroot, pid=vm.pidfile) == open(vm.optfile, 'r').read()
 
         assert os.readlink(vm.initfile) == 'kvm'
 
