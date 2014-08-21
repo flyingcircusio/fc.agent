@@ -1,0 +1,8 @@
+syntax: glob
+
+lib
+include
+.Python
+*.pyc
+bin/
+*.egg-info

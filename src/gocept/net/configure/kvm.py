@@ -90,6 +90,8 @@ class VM(object):
              self.parameters['kvm_host']])
 
     def inmigrate(self):
+        if self.is_running():
+            return
         subprocess.check_call(
             ['/usr/bin/fc-livemig', self.name, 'incoming',
              self.this_kvm_host])
