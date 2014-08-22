@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='fc.agent',
-    version='1.3.7.dev0',
+    version='1.4.0',
     author='gocept',
     author_email='mail@gocept.com',
     url='http://bitbucket.org/flyingcircus/fc.agent/',
