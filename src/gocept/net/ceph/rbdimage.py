@@ -1,7 +1,8 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
+"""Value object to represent an individual RBD image"""
 
 import collections
+import datetime
+import re
 
 
 class RBDImage(collections.namedtuple('RBDImage', [
@@ -31,3 +32,16 @@ class RBDImage(collections.namedtuple('RBDImage', [
     @property
     def size_gb(self):
         return int(round(self.size / 2**30))
+
+    r_snapshot_keep_until = re.compile(r'-keep-until-(\d{8})$')
+
+    @property
+    def is_outdated_snapshot(self):
+        """Returns True if this snapshot shouldn't be kept anymore."""
+        if not self.snapshot or self.lock_type or self.protected:
+            return False
+        match = self.r_snapshot_keep_until.search(self.snapshot)
+        if match:
+            d = datetime.datetime.strptime(match.group(1), '%Y%m%d')
+            date = datetime.date(d.year, d.month, d.day)
+            return date < datetime.date.today()

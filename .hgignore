@@ -6,3 +6,4 @@ include
 *.pyc
 bin/
 *.egg-info
+lib64

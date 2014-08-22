@@ -1,6 +1,3 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Commonly used utility functions."""
 
 from __future__ import unicode_literals, print_function
@@ -18,6 +15,7 @@ def print(*args, **kw):
     __builtins__['print'](*args, **kw)
 
 
+# XXX obsolete -- use freezegun instead
 def now(tzinfo=pytz.utc):
     return datetime.datetime.now(tzinfo)
 

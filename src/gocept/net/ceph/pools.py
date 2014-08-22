@@ -46,6 +46,10 @@ class Pools(object):
         """Returns list of all pools in the cluster as Pool objects."""
         return (self[p] for p in self.names())
 
+    def __iter__(self):
+        """Short form for `for i in pools.all():`."""
+        return self.all()
+
     def pick(self):
         """Returns randomly picked pool (as Pool object)."""
         return self[random.choice(list(self.names()))]
@@ -155,3 +159,8 @@ class Pool(object):
     @property
     def size_total_gb(self):
         return sum(i.size_gb for i in self.images)
+
+    def snap_rm(self, rbdimage):
+        self.cluster.rbd(['snap', 'rm', '{}/{}@{}'.format(
+            self.name, rbdimage.image, rbdimage.snapshot)])
+        self._images = None
