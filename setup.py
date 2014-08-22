@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import os
 
 setup(
     name='fc.agent',
@@ -14,12 +13,16 @@ Local configuration utilities and helper APIs for flyingcircus.io system configu
     package_dir={'': 'src'},
     include_package_data=True,
     zip_safe=False,
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Programming Language :: Python :: 2.7',
+    ],
     license='BSD',
     namespace_packages=['gocept'],
     install_requires=[
         'setuptools',
         'python-ldap',
-        'mock>=0.8',
         'pytz',
         'iso8601>=0.1.4',
         'configobj>=4.7',
@@ -41,11 +44,12 @@ Local configuration utilities and helper APIs for flyingcircus.io system configu
             'localconfig-resize2fs-vmroot = gocept.net.configure.resize2fs:check_grow',
             'localconfig-users = gocept.net.configure.users:main',
             'localconfig-zones = gocept.net.configure.zones:update',
-            'rbd-images = gocept.net.ceph.utils:list_images',
             'redundancy-groups = gocept.net.directory:redundancy_groups',
             'request-maintenance = gocept.net.maintenance.script:request',
             'run-maintenance = gocept.net.maintenance.script:run',
             'schedule-maintenance = gocept.net.maintenance.script:schedule',
+            'rbd-images = gocept.net.ceph.utils:list_images',
+            'rbd-clean-old-snapshots = gocept.net.ceph.utils:clean_old_snapshots',
         ],
     },
 )

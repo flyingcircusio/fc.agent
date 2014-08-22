@@ -1,4 +1,5 @@
 from ..rbdimage import RBDImage
+import freezegun
 
 
 class TestRBDImageTest(object):
@@ -31,3 +32,34 @@ class TestRBDImageTest(object):
         i = RBDImage.from_dict({
             'image': 'foo', 'size': 10000, 'protected': 'true'})
         assert i.protected
+
+    @freezegun.freeze_time('2014-08-22')
+    def test_image_without_snapshot_is_never_outdated(self):
+        i = RBDImage.from_dict({'image': 'foo', 'size': 10240})
+        assert not i.is_outdated_snapshot
+
+    @freezegun.freeze_time('2014-08-23')
+    def test_protected_image_is_never_outdated(self):
+        i = RBDImage.from_dict({
+            'image': 'foo', 'size': 10240, 'protected': 'true',
+            'snapshot': 'test-keep-until-20140822'})
+        assert not i.is_outdated_snapshot
+
+    @freezegun.freeze_time('2014-08-23')
+    def test_locked_image_is_never_outdated(self):
+        i = RBDImage.from_dict({
+            'image': 'foo', 'size': 10240, 'lock_type': 'exclusive',
+            'snapshot': 'test-keep-until-20140822'})
+        assert not i.is_outdated_snapshot
+
+    @freezegun.freeze_time('2014-08-22')
+    def test_snapshot_not_outdated(self):
+        i = RBDImage.from_dict({'image': 'foo', 'size': 10240,
+                                'snapshot': 'test-keep-until-20140822'})
+        assert not i.is_outdated_snapshot
+
+    @freezegun.freeze_time('2014-08-23')
+    def test_snapshot_outdated(self):
+        i = RBDImage.from_dict({'image': 'foo', 'size': 10240,
+                                'snapshot': 'test-keep-until-20140822'})
+        assert i.is_outdated_snapshot

@@ -1,12 +1,12 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Command line utilities to easy handling of Ceph images."""
 
 from __future__ import unicode_literals, print_function
+from cluster import Cluster
 from pools import Pools
 import argparse
+import datetime
 import operator
+import re
 import socket
 
 
@@ -46,7 +46,7 @@ def list_images():
     else:
         formatter = short_formatter
 
-    pools_collection = Pools(args.id, args.conf)
+    pools_collection = Pools(Cluster(args.conf, args.id))
     if args.POOL:
         pools = [pools_collection.lookup(args.POOL)]
     else:
@@ -54,3 +54,26 @@ def list_images():
     for pool in sorted(pools, key=operator.attrgetter('name')):
         for img in sorted(pool.images, key=operator.attrgetter('name')):
             print(formatter(pool, img))
+
+
+def clean_old_snapshots():
+    """Remove old RBD snapshots automatically.
+
+    Snapshots that follow the naming convention "*-keep-until-YYYYMMDD"
+    will be removed after the day encoded in the name.
+    """
+    a = argparse.ArgumentParser(description=clean_old_snapshots.__doc__)
+    a.add_argument('-i', '--id', default=socket.gethostname(),
+                   help='Ceph auth id (defaults to hostname)')
+    a.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
+                   help='Ceph configuration file (default: %(default)s)')
+    a.add_argument('-n', '--dry-run', default=False, action='store_true',
+                   help="don't do anything real, just tell")
+    args = a.parse_args()
+    pools = Pools(Cluster(args.conf, args.id, args.dry_run))
+    for pool in pools:
+        for image in pool.images:
+            if image.is_outdated_snapshot:
+                print('{}: removing snapshot {}/{}'.format(
+                    a.prog, pool.name, image.name))
+                pool.snap_rm(image)
