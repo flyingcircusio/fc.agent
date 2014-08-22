@@ -1,0 +1,4 @@
+include *.txt
+include pytest.ini
+graft src/gocept/net/ceph/tests/fixtures
+graft src/gocept/net/configure/tests/fixtures
