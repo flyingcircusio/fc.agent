@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.4.1 (unreleased)
+1.4.1 (2014-09-09)
 ------------------
 
 - Let Nagios configure contacts for technical contacts of resource groups, too.
