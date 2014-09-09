@@ -1,11 +1,8 @@
-# Copyright (c) 2011 gocept gmbh & co. kg
-# See also LICENSE.txt
-#
 # Manage nagios contacts: Nagios contacts for a specific contact group are all
 # users with the "stats" permission. Users with the keyword "nonagios" in their
 # description field are excluded from mails but still able to log in.
 
-from gocept.net.directory import Directory
+import gocept.net.directory
 import StringIO
 import gocept.net.ldaptools
 import hashlib
@@ -16,12 +13,13 @@ import re
 
 
 CONTACT_TEMPLATE = """
-define contact {
+define contact {{
     use                 generic-contact
-    contact_name        %(uid)s%(groups)s
-    alias               %(cn)s
-    email               %(mail)s
-%(notifications)s}
+    contact_name        {name}
+    alias               {alias}
+    email               {mail}
+{additional_options}
+}}
 """
 
 NO_NOTIFICATIONS_TEMPLATE = """\
@@ -39,14 +37,18 @@ define contactgroup {
 
 class NagiosContacts(object):
 
+    prefix = ''
+
     def __init__(self):
+        self.directory = gocept.net.directory.Directory()
+        self.needs_restart = False
+
+    def _init_ldap(self):
         self.ldapconf = gocept.net.ldaptools.load_ldapconf('/etc/ldap.conf')
         self.server = ldap.initialize('ldap://%s/' % self.ldapconf['host'])
         self.server.protocol_version = ldap.VERSION3
         self.server.simple_bind_s(
             self.ldapconf['binddn'], self.ldapconf['bindpw'])
-        self.directory = Directory()
-        self.needs_restart = False
         self.groups = list(self.search(
             'ou=Group', '(objectClass=posixGroup)'))
         if len(self.groups) <= 1:
@@ -64,6 +66,7 @@ class NagiosContacts(object):
             os.system('/etc/init.d/nagios reload > /dev/null')
 
     def _flush(self, filename, content):
+        # XXX use configfile pattern!
         if os.path.exists(filename):
             old = open(filename, 'r').read()
             if content == old:
@@ -75,6 +78,7 @@ class NagiosContacts(object):
         self.needs_restart = True
 
     def contact_groups(self):
+        self._init_ldap()
         result = StringIO.StringIO()
         for group in self.groups:
             result.write(CONTACT_GROUP_TEMPLATE % dict(
@@ -93,8 +97,9 @@ class NagiosContacts(object):
         stats_permission = {}
         for group in self.groups:
             group_id = group['cn'][0]
-            for grant in self.search('cn=%s,ou=Group' % group_id,
-                        '(&(permission=stats)(objectClass=permissionGrant))'):
+            for grant in self.search(
+                    'cn=%s,ou=Group' % group_id,
+                    '(&(permission=stats)(objectClass=permissionGrant))'):
                 for user in grant['uid']:
                     stats_permission.setdefault(user, set())
                     stats_permission[user].add(group_id)
@@ -106,66 +111,64 @@ class NagiosContacts(object):
         admins = self.admins()
         stats_permission = self.stats_permission()
 
-        for user in self.search('ou=People',
-                '(&(cn=*)(objectClass=organizationalPerson))'):
-            groups = ''
+        for user in self.search(
+                'ou=People', '(&(cn=*)(objectClass=organizationalPerson))'):
+            additional_options = []
             grp = []
             if user['uid'][0] in admins:
                 grp.append('admins')
             grp.extend(stats_permission.get(user['uid'][0], []))
             if grp:
-                groups = '\n    contact_groups      ' + ','.join(grp)
+                additional_options.append(
+                    '    contact_groups      ' + ','.join(grp))
             if 'nonagios' in '\n'.join(user.get('description', [])):
-                notifications = NO_NOTIFICATIONS_TEMPLATE
-            else:
-                notifications = ''
+                additional_options.append(NO_NOTIFICATIONS_TEMPLATE)
             try:
-                result.write(CONTACT_TEMPLATE % dict(
-                    uid=user['uid'][0],
-                    groups=groups,
-                    cn=user['cn'][0],
+                result.write(CONTACT_TEMPLATE.format(
+                    name=user['uid'][0],
+                    alias=user['cn'][0],
                     mail=user['mail'][0],
-                    notifications=notifications))
+                    additional_options='\n'.join(additional_options)))
             except KeyError:
                 pass
 
         self._flush('/etc/nagios/globals/contacts.cfg', result.getvalue())
 
-    def contacts2(self):
-        """List all technical contacts"""
+    def contacts_technical(self):
+        """List all technical contacts as Nagios contacts."""
         result = StringIO.StringIO()
 
         contacts = dict()
         for group in self.directory.list_resource_groups():
-            try:
-                group_details = self.directory.lookup_resourcegroup(group)
-                technical_contacts = group_details['technical_contacts']
-            except KeyError:
-                continue
+            # XXX directory load. a comprehensive API would be nice.
+            group_details = self.directory.lookup_resourcegroup(group)
+            technical_contacts = group_details.get('technical_contacts', [])
             for contact in technical_contacts:
-                groups = contacts.setdefault(contact, list())
-                groups.append(group)
+                contacts.setdefault(contact, []).append(group)
 
-        for contact, groups in contacts.iteritems():
-            contact_hash = hashlib.sha2()
-            contact_hash.update(contact)
-            contact_name = "TECHNICAL_CONTACT_{}_{}".format(
-                re.sub(r'[^a-zA-Z0-9]', '_', contact),
-                contact_hash.hexdigest()[:5])
-            groups = '\n    contact_groups      ' + ','.join(groups)
-            try:
-                result.write(CONTACT_TEMPLATE % dict(
-                    uid=contact_name,
-                    groups=groups,
-                    cn="TECHNICAL CONTACT",
-                    mail=contact,
-                    notifications=''))
-            except KeyError:
-                pass
+        for contact, groups in contacts.items():
+            contact_hash = hashlib.sha256(contact)
+            contact_hash = contact_hash.hexdigest()[:5]
+
+            contact_safe = re.sub(r'[^a-zA-Z0-9]', '_', contact)
+            contact_name = "technical_contact_{}_{}".format(
+                contact_safe, contact_hash)
+
+            additional_options = '    contact_groups      ' + ','.join(groups)
+            result.write(CONTACT_TEMPLATE.format(
+                name=contact_name,
+                alias='Technical contact {} ({})'.format(
+                    contact_safe, contact_hash),
+                mail=contact,
+                additional_options=additional_options))
+
+        target = self.prefix + '/etc/nagios/globals/technical_contacts.cfg'
+        self._flush(target, result.getvalue())
 
 
 def contacts():
     configuration = NagiosContacts()
     configuration.contact_groups()
     configuration.contacts()
+    configuration.contacts_technical()
     configuration.finish()

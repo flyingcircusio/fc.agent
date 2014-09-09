@@ -5,4 +5,6 @@ import gocept.net.directory
 
 @pytest.fixture
 def directory(monkeypatch):
-    monkeypatch.setattr(gocept.net.directory, 'Directory', mock.Mock())
+    directory = mock.Mock()
+    monkeypatch.setattr(gocept.net.directory, 'Directory', directory)
+    return directory
