@@ -5,11 +5,14 @@
 # users with the "stats" permission. Users with the keyword "nonagios" in their
 # description field are excluded from mails but still able to log in.
 
+from gocept.net.directory import Directory
 import StringIO
 import gocept.net.ldaptools
+import hashlib
 import ldap
 import os
 import os.path
+import re
 
 
 CONTACT_TEMPLATE = """
@@ -42,6 +45,7 @@ class NagiosContacts(object):
         self.server.protocol_version = ldap.VERSION3
         self.server.simple_bind_s(
             self.ldapconf['binddn'], self.ldapconf['bindpw'])
+        self.directory = Directory()
         self.needs_restart = False
         self.groups = list(self.search(
             'ou=Group', '(objectClass=posixGroup)'))
@@ -126,6 +130,38 @@ class NagiosContacts(object):
                 pass
 
         self._flush('/etc/nagios/globals/contacts.cfg', result.getvalue())
+
+    def contacts2(self):
+        """List all technical contacts"""
+        result = StringIO.StringIO()
+
+        contacts = dict()
+        for group in self.directory.list_resource_groups():
+            try:
+                group_details = self.directory.lookup_resourcegroup(group)
+                technical_contacts = group_details['technical_contacts']
+            except KeyError:
+                continue
+            for contact in technical_contacts:
+                groups = contacts.setdefault(contact, list())
+                groups.append(group)
+
+        for contact, groups in contacts.iteritems():
+            contact_hash = hashlib.sha2()
+            contact_hash.update(contact)
+            contact_name = "TECHNICAL_CONTACT_{}_{}".format(
+                re.sub(r'[^a-zA-Z0-9]', '_', contact),
+                contact_hash.hexdigest()[:5])
+            groups = '\n    contact_groups      ' + ','.join(groups)
+            try:
+                result.write(CONTACT_TEMPLATE % dict(
+                    uid=contact_name,
+                    groups=groups,
+                    cn="TECHNICAL CONTACT",
+                    mail=contact,
+                    notifications=''))
+            except KeyError:
+                pass
 
 
 def contacts():
