@@ -2,6 +2,7 @@ from ..configfile import ConfigFile
 import gocept.net.directory
 import logging
 import os
+import os.path
 import subprocess
 import sys
 import tempfile
@@ -33,7 +34,7 @@ def call(*cmd):
 class VM(object):
 
     root = ''  # support testing
-    configfile = '{root}/etc/qemu/{name}.yaml'
+    configfile = '{root}/etc/qemu/vm/{name}.cfg'
 
     def __init__(self, enc):
         self.name = enc['name']
@@ -76,6 +77,9 @@ class VM(object):
             os.unlink(init)
 
     def write_config_file(self):
+        parent = os.path.dirname(self.configfile)
+        if not os.path.exists(parent):
+            os.makedirs(parent)
         c = ConfigFile(self.configfile)
         c.write(yaml.dump(self.enc))
         c.commit()
@@ -94,5 +98,6 @@ def ensure_vms():
         try:
             vm.ensure()
         except Exception:
+            raise
             exitcode = 1
     sys.exit(exitcode)
