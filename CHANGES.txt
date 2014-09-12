@@ -7,6 +7,8 @@ Changelog
 - Integate new fc.qemu package instead of instrumenting a complicated
   init script.
 
+- Restart firewall in case of changed config files.
+
 
 1.4.1 (2014-09-09)
 ------------------
