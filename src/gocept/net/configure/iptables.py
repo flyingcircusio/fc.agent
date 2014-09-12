@@ -24,7 +24,21 @@ class Iptables(object):
         self.location = location
         self.rg = rg
         self.vlan = vlan
-        self.config_changed = False
+        self.config_changed = self.config_has_changed()
+
+    def config_has_changed(self):
+        """Check if config files were changed by a service user"""
+        for ipt_cmd in ['iptables', 'ip6tables']:
+            last_update = os.path.getmtime('/var/lib/{}/rules'.format(ipt_cmd))
+            for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
+                try:
+                    config = '/var/lib/{}/rules.d/filter/{}/local'.format(
+                        ipt_cmd, chain)
+                    if last_update < os.path.getmtime(config):
+                        return True
+                except OSError:
+                    continue
+        return False
 
     def rg_addresses(self):
         """Query list of addresses in local vlan+location from directory."""
