@@ -1,4 +1,5 @@
 from ..configfile import ConfigFile
+import glob
 import gocept.net.directory
 import logging
 import os
@@ -43,10 +44,9 @@ class VM(object):
             setattr(self, attr,
                     getattr(self, attr).format(root=self.root, **enc))
 
-    def ensure(self):
+    def ensure_config(self):
         self.write_config_file()
         self.migrate_old_files()
-        call('fc-qemu', 'ensure', self.name)
 
     def migrate_old_files(self):
         old_config = ['{}/run/kvm.{}.cfg',
@@ -85,19 +85,39 @@ class VM(object):
         c.commit()
 
 
-def ensure_vms():
-    exitcode = 0
+def update_configs():
     directory = gocept.net.directory.Directory()
     location = os.environ['PUPPET_LOCATION']
 
     with gocept.net.directory.exceptions_screened():
-        vms = directory.list_virtual_machines(location)
+        try:
+            vms = directory.list_virtual_machines(location)
+        except Exception:
+            return 1
 
+    exit_code = 0
     for vm_data in vms:
         vm = VM(vm_data)
         try:
-            vm.ensure()
+            vm.ensure_config()
         except Exception:
-            raise
-            exitcode = 1
-    sys.exit(exitcode)
+            exit_code = 1
+    return exit_code
+
+
+def ensure_vms():
+    exit_code = 0
+    try:
+        exit_code = update_configs()
+    except Exception:
+        exit_code = 1
+
+    # Allow VMs to be restarted after a crash even if the directory
+    # is not around ATM.
+    for vm in glob.glob('/etc/qemu/vm/*.cfg'):
+        try:
+            call('fc-qemu', 'ensure', vm)
+        except Exception:
+            exit_code = 1
+
+    sys.exit(exit_code)

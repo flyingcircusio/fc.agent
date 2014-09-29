@@ -4,7 +4,11 @@ Changelog
 1.5.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Ensure we do not block restarts of VMs when the directory is not up.
+
+- Ensure we screen directory exceptions when generating Nagios contacts.
+
+- Remove old, unused, and broken KVM entry points.
 
 
 1.5.0 (2014-09-13)

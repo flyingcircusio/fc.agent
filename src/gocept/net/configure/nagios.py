@@ -167,8 +167,9 @@ class NagiosContacts(object):
 
 
 def contacts():
-    configuration = NagiosContacts()
-    configuration.contact_groups()
-    configuration.contacts()
-    configuration.contacts_technical()
-    configuration.finish()
+    with gocept.net.directory.exceptions_screened():
+        configuration = NagiosContacts()
+        configuration.contact_groups()
+        configuration.contacts()
+        configuration.contacts_technical()
+        configuration.finish()

@@ -45,14 +45,14 @@ class KVMConfigTest(unittest.TestCase):
         del os.environ['PUPPET_LOCATION']
         self.p_directory.stop()
 
-    @mock.patch('gocept.net.configure.kvm.VM.ensure')
+    @mock.patch('gocept.net.configure.kvm.VM.ensure_config')
     def test_no_actions_on_empty_list(self, ensure):
         with self.assertRaises(SystemExit) as e:
             ensure_vms()
         assert e.exception.code == 0
         self.assertEquals(ensure.call_count, 0)
 
-    @mock.patch('gocept.net.configure.kvm.VM.ensure')
+    @mock.patch('gocept.net.configure.kvm.VM.ensure_config')
     def test_listed_vms_get_ensure_called(self, ensure):
         self.fake_directory().list_virtual_machines.return_value = [
             make_vm()]
@@ -79,7 +79,7 @@ class VMTest(unittest.TestCase):
 
     def test_vm_config_generated_and_ensure_called(self):
         vm = VM(make_vm(online=True, kvm_host='foo'))
-        vm.ensure()
+        vm.ensure_config()
         assert """\
 name: test00
 parameters:
@@ -108,7 +108,7 @@ parameters:
                  vm.root+'/etc/init.d/kvm.test00']
         for f in files:
             open(f, 'w')
-        vm.ensure()
+        vm.ensure_config()
         assert os.path.exists(vm.root+'/run/qemu.test00.pid')
         for f in files:
             assert not os.path.exists(f)
