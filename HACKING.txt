@@ -1,0 +1,19 @@
+HACKING
+=======
+
+How to run tests
+----------------
+
+Tests run via py.test::
+
+   virtualenv -p python2.7 .
+   bin/pip install -r requirements.txt
+   bin/py.test
+
+How to release
+--------------
+
+Use zest.releaser.
+
+
+.. vim: set ft=rst:

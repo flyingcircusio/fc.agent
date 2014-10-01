@@ -12,6 +12,8 @@ Changelog
 
 - Avoid duplicates when creating technical contacts. (#13629)
 
+- Explain how to run tests in HACKING.txt.
+
 
 1.5.0 (2014-09-13)
 ------------------
