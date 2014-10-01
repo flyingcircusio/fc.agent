@@ -42,6 +42,7 @@ class NagiosContacts(object):
     def __init__(self):
         self.directory = gocept.net.directory.Directory()
         self.needs_restart = False
+        self.contacts_seen = {}
 
     def _init_ldap(self):
         self.ldapconf = gocept.net.ldaptools.load_ldapconf('/etc/ldap.conf')
@@ -118,6 +119,7 @@ class NagiosContacts(object):
             if user['uid'][0] in admins:
                 grp.append('admins')
             grp.extend(stats_permission.get(user['uid'][0], []))
+            self.contacts_seen.setdefault(user['mail'][0], set()).update(grp)
             if grp:
                 additional_options.append(
                     '    contact_groups      ' + ','.join(grp))
@@ -147,6 +149,12 @@ class NagiosContacts(object):
                 contacts.setdefault(contact, []).append(group)
 
         for contact, groups in contacts.items():
+            groups = set(groups)
+            groups.difference_update(self.contacts_seen.get(contact, set()))
+            if not groups:
+                continue
+            groups = list(groups)
+            groups.sort()
             contact_hash = hashlib.sha256(contact)
             contact_hash = contact_hash.hexdigest()[:5]
 

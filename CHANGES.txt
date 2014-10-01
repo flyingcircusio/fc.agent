@@ -10,6 +10,8 @@ Changelog
 
 - Remove old, unused, and broken KVM entry points.
 
+- Avoid duplicates when creating technical contacts. (#13629)
+
 
 1.5.0 (2014-09-13)
 ------------------

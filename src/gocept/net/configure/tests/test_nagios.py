@@ -33,3 +33,19 @@ define contact {
     contact_groups      foobar
 }
 '''
+
+def test_ignore_duplicate_contacts(empty_config, tmpdir, capsys, monkeypatch,
+                                   directory):
+    directory = directory()
+    directory.list_resource_groups.return_value = ['foobar']
+    directory.lookup_resourcegroup.return_value = {
+        'technical_contacts': ['foo@example.com']}
+
+    contacts = NagiosContacts()
+    contacts.prefix = str(tmpdir)
+    contacts.contacts_seen['foo@example.com'] = set(['foobar'])
+    contacts.contacts_technical()
+
+    target = str(tmpdir/'/etc/nagios/globals/technical_contacts.cfg')
+    found = open(target, 'r').read()
+    assert found == ''
