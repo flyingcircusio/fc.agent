@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.2 (unreleased)
+1.5.2 (2014-10-01)
 ------------------
 
 - Revive localconfig-resize2fs-root: this is not obsolete but necessary for
