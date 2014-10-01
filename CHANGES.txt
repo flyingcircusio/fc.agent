@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.1 (unreleased)
+1.5.1 (2014-10-01)
 ------------------
 
 - Ensure we do not block restarts of VMs when the directory is not up.
