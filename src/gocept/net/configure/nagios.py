@@ -119,7 +119,9 @@ class NagiosContacts(object):
             if user['uid'][0] in admins:
                 grp.append('admins')
             grp.extend(stats_permission.get(user['uid'][0], []))
-            self.contacts_seen.setdefault(user['mail'][0], set()).update(grp)
+            if 'mail' in user:
+                self.contacts_seen.setdefault(user['mail'][0], set()).update(
+                    grp)
             if grp:
                 additional_options.append(
                     '    contact_groups      ' + ','.join(grp))
