@@ -7,6 +7,9 @@ Changelog
 - Revive localconfig-resize2fs-root: this is not obsolete but necessary for
   disk grow.
 
+- Exclude users from duplicate contact detection in case they have no email
+  address.
+
 
 1.5.1 (2014-10-01)
 ------------------
