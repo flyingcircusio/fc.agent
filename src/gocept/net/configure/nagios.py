@@ -67,6 +67,7 @@ class NagiosContacts(object):
             os.system('/etc/init.d/nagios reload > /dev/null')
 
     def _flush(self, filename, content):
+        filename = self.prefix + filename
         # XXX use configfile pattern!
         if os.path.exists(filename):
             old = open(filename, 'r').read()
@@ -106,14 +107,18 @@ class NagiosContacts(object):
                     stats_permission[user].add(group_id)
         return stats_permission
 
+    def users(self):
+        return self.search(
+            'ou=People', '(&(cn=*)(objectClass=organizationalPerson))')
+
+
     def contacts(self):
         """List all users as contacts"""
         result = StringIO.StringIO()
         admins = self.admins()
         stats_permission = self.stats_permission()
 
-        for user in self.search(
-                'ou=People', '(&(cn=*)(objectClass=organizationalPerson))'):
+        for user in self.users():
             additional_options = []
             grp = []
             if user['uid'][0] in admins:
@@ -172,8 +177,8 @@ class NagiosContacts(object):
                 mail=contact,
                 additional_options=additional_options))
 
-        target = self.prefix + '/etc/nagios/globals/technical_contacts.cfg'
-        self._flush(target, result.getvalue())
+        self._flush('/etc/nagios/globals/technical_contacts.cfg',
+                    result.getvalue())
 
 
 def contacts():
