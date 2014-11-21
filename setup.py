@@ -38,7 +38,6 @@ system configuration.
             'localconfig-ceph-pools = gocept.net.configure.ceph:pools',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
             'localconfig-iptables-inputrules = gocept.net.configure.iptables:inputrules',
-            'localconfig-kvm-init = gocept.net.configure.kvm:ensure_vms',
             'localconfig-nagioscontacts = gocept.net.configure.nagios:contacts',
             'localconfig-postfix-master = gocept.net.configure.postfix:master',
             'localconfig-puppetmaster = gocept.net.configure.puppetmaster:main',
