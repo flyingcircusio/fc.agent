@@ -4,9 +4,7 @@ from __future__ import unicode_literals, print_function
 from cluster import Cluster
 from pools import Pools
 import argparse
-import datetime
 import operator
-import re
 import socket
 
 
@@ -60,7 +58,8 @@ def clean_old_snapshots():
     """Remove old RBD snapshots automatically.
 
     Snapshots that follow the naming convention "*-keep-until-YYYYMMDD"
-    will be removed after the day encoded in the name.
+    or "*-keep-until-YYYYMMDDTHHMMSS" will be removed after the day
+    encoded in the name.
     """
     a = argparse.ArgumentParser(description=clean_old_snapshots.__doc__)
     a.add_argument('-i', '--id', default=socket.gethostname(),

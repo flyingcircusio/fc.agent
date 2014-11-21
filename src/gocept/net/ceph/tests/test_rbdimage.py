@@ -19,7 +19,7 @@ class TestRBDImageTest(object):
 
     def test_construct_with_defaults(self):
         i = RBDImage('test06.root', 10737418240)
-        assert  1 == i.format
+        assert 1 == i.format
         assert i.lock_type is None
         assert 'test06.root' == i.name
 
@@ -59,7 +59,13 @@ class TestRBDImageTest(object):
         assert not i.is_outdated_snapshot
 
     @freezegun.freeze_time('2014-08-23')
-    def test_snapshot_outdated(self):
+    def test_snapshot_outdated_date(self):
         i = RBDImage.from_dict({'image': 'foo', 'size': 10240,
                                 'snapshot': 'test-keep-until-20140822'})
+        assert i.is_outdated_snapshot
+
+    @freezegun.freeze_time('2014-08-23')
+    def test_snapshot_outdated_time(self):
+        i = RBDImage.from_dict({'image': 'foo', 'size': 10240,
+                                'snapshot': 'test-keep-until-20140822T105800'})
         assert i.is_outdated_snapshot
