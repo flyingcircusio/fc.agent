@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.3 (unreleased)
+1.5.3 (2014-11-22)
 ------------------
 
 - Refactored resize2fs disk grow code (#13414).
