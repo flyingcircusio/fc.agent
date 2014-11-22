@@ -5,6 +5,10 @@ Changelog
 ------------------
 
 - Refactored resize2fs disk grow code (#13414).
+- Delete expired snapshots which adhere to the '*-keep-until-*' naming
+  convention (#13414).
+- Remove old KVM configure code. The code lives now in the fc.qemu package
+  (#13414).
 
 
 1.5.2 (2014-10-01)
