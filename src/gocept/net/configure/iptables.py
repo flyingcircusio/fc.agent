@@ -24,21 +24,6 @@ class Iptables(object):
         self.location = location
         self.rg = rg
         self.vlan = vlan
-        self.config_changed = self.config_has_changed()
-
-    def config_has_changed(self):
-        """Check if config files were changed by a service user"""
-        for ipt_cmd in ['iptables', 'ip6tables']:
-            last_update = os.path.getmtime('/var/lib/{}/rules'.format(ipt_cmd))
-            for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
-                try:
-                    config = '/var/lib/{}/rules.d/filter/{}/local'.format(
-                        ipt_cmd, chain)
-                    if last_update < os.path.getmtime(config):
-                        return True
-                except OSError:
-                    continue
-        return False
 
     def rg_addresses(self):
         """Query list of addresses in local vlan+location from directory."""
@@ -57,7 +42,7 @@ class Iptables(object):
             rule = '-A INPUT -i {0} -s {1} -j ACCEPT'.format(self.iface, addr)
             print(rule, file=rulesfiles[addr.version])
         for f in rulesfiles.values():
-            self.config_changed = f.commit() or self.config_changed
+            f.commit()
 
     def feature_enabled(self):
         """Return True if iptables feature is switched on."""
@@ -68,21 +53,9 @@ class Iptables(object):
         # No srv net? Probably bootstrapping still in progress
         return ('ethsrv' in netdevs) or ('brsrv' in netdevs)
 
-    @property
-    def empty_iptables(self):
-        """Detect if no rules have been loaded before."""
-        iptables = subprocess.check_output(['iptables', '-LINPUT', '-n'])
-        if len(iptables.strip().split('\n')) <= 3:
-            return True
-        iptables = subprocess.check_output(['ip6tables', '-LINPUT', '-n'])
-        if len(iptables.strip().split('\n')) <= 3:
-            return True
-        return False
-
     def reload_iptables(self):
         """Trigger reload of changed iptables rules."""
-        if self.config_changed or self.empty_iptables:
-            subprocess.check_call(['update-iptables'])
+        subprocess.check_call(['update-iptables'])
 
     def puppet_catalog_run(self):
         try:
