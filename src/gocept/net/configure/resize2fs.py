@@ -15,10 +15,13 @@ class Disk(object):
         self.sgdisk_out = None
 
     def check_gpt(self):
-        self.sgdisk_out = subprocess.check_output([
-            'sgdisk', '-v', self.dev]).decode()
-        if 'Problem: The secondary' in self.sgdisk_out:
+        for i in range(0, 3):
+            self.sgdisk_out = subprocess.check_output([
+                'sgdisk', '-v', self.dev]).decode()
+            if not 'Problem: The secondary' in self.sgdisk_out:
+	        return
             subprocess.check_call(['sgdisk', '-e', self.dev])
+	raise RuntimeError('Unable to fix GPT disk layout')
 
     r_free = re.compile(r'\s([0-9]+) free sectors')
 
