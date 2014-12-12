@@ -4,7 +4,8 @@ Changelog
 1.5.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix bug which caused disk grow to fail during the first attempt (#13930).
+- Improve iptables reloading (#13879).
 
 
 1.5.3 (2014-11-22)

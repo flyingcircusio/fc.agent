@@ -12,23 +12,22 @@ class Disk(object):
 
     def __init__(self, dev):
         self.dev = dev
-        self.sgdisk_out = None
 
-    def check_gpt(self):
-        for i in range(0, 3):
-            self.sgdisk_out = subprocess.check_output([
-                'sgdisk', '-v', self.dev]).decode()
-            if not 'Problem: The secondary' in self.sgdisk_out:
-                return
+    def ensure_gpt_consistency(self):
+        sgdisk_out = subprocess.check_output([
+            'sgdisk', '-v', self.dev]).decode()
+        if 'Problem: The secondary' in sgdisk_out:
             subprocess.check_call(['sgdisk', '-e', self.dev])
-        raise RuntimeError('Unable to fix GPT disk layout')
 
     r_free = re.compile(r'\s([0-9]+) free sectors')
 
     def free_sectors(self):
-        if not self.sgdisk_out:
-            raise RuntimeError('must call check_gpt() first')
-        free = self.r_free.search(self.sgdisk_out)
+        sgdisk_out = subprocess.check_output([
+            'sgdisk', '-v', self.dev]).decode()
+        free = self.r_free.search(sgdisk_out)
+        if not free:
+            raise RuntimeError('unable to determine number of free sectors',
+                               sgdisk_out)
         return(int(free.group(1)))
 
     def grow_partition(self):
@@ -45,9 +44,8 @@ class Disk(object):
         subprocess.check_call(['resizepart', self.dev, '1', partition_size])
         subprocess.check_call(['resize2fs', '{}1'.format(self.dev)])
 
-
     def grow(self):
-        self.check_gpt()
+        self.ensure_gpt_consistency()
         free = self.free_sectors()
         if free > self.FREE_SECTOR_THRESHOLD:
             print('{} free sectors on {}, growing'.format(free, self.dev))
