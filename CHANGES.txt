@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.4 (unreleased)
+1.5.4 (2014-12-12)
 ------------------
 
 - Fix bug which caused disk grow to fail during the first attempt (#13930).
