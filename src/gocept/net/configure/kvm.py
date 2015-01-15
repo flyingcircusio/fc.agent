@@ -18,7 +18,7 @@ def call(*cmd):
         print('calling {}'.format(cmd))
     try:
         subprocess.check_call(cmd)
-    except subprocess.CalledProcessError, e:
+    except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
 
 

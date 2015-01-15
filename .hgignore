@@ -1,11 +1,13 @@
 syntax: glob
 
-lib
-include
-.Python
-*.pyc
 bin/
-*.egg-info
 dist
+*.egg-info
+include
+lib
 lib64
+*.pyc
+.Python
+.ropeproject/
+*.sw[po]
 tags
