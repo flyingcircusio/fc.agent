@@ -7,7 +7,6 @@ import argparse
 import netaddr
 import os.path
 import subprocess
-import sys
 
 
 class Iptables(object):
@@ -59,13 +58,13 @@ class Iptables(object):
 
     def puppet_catalog_run(self):
         try:
-            with open(self.PUPPET_LOCKFILE, 'r') as f:
+            with open(self.PUPPET_LOCKFILE) as f:
                 pid = int(f.read())
         except (IOError, OSError, ValueError):
             return False
         try:
             os.kill(pid, 0)
-        except ProcessLookupError:
+        except OSError:
             return False
         return True
 

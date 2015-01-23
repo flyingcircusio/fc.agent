@@ -4,7 +4,7 @@ Changelog
 1.5.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix bogus ProcessLookupError except clause.
 
 
 1.5.4 (2014-12-12)
