@@ -111,7 +111,6 @@ class NagiosContacts(object):
         return self.search(
             'ou=People', '(&(cn=*)(objectClass=organizationalPerson))')
 
-
     def contacts(self):
         """List all users as contacts"""
         result = StringIO.StringIO()

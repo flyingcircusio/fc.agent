@@ -4,6 +4,8 @@ Changelog
 1.5.5 (unreleased)
 ------------------
 
+- Use new deletions API to clean up VM deletions on puppetmaster.
+
 - Fix bogus ProcessLookupError except clause.
 
 

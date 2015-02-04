@@ -1,11 +1,19 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Manage short-lived configuration of the puppet master."""
-
-import gocept.net.directory
 import gocept.net.configfile
+import gocept.net.directory
+import logging
 import os
+import subprocess
+
+logger = logging.getLogger(__name__)
+
+
+def log_call(*args):
+    try:
+        subprocess.check_call(*args)
+    except Exception:
+        logger.exception()
+
 
 class Puppetmaster(object):
     """puppetmaster config generator."""
@@ -27,8 +35,18 @@ class Puppetmaster(object):
         conffile.write(''.join(nodes))
         conffile.commit()
 
+    def delete_nodes(self):
+        with gocept.net.directory.exceptions_screened():
+            deletions = self.directory.deletions('vm')
+        for name, node in deletions.items():
+            if 'soft' in node['stages']:
+                log_call(['puppet', 'node', 'deactivate', name])
+            if 'hard' in node['stages']:
+                log_call(['puppet', 'node', 'clean', name])
+
 
 def main():
     """.conf generator main script."""
     master = Puppetmaster(os.environ['PUPPET_LOCATION'], os.environ['SUFFIX'])
     master.autosign()
+    master.delete_nodes()
