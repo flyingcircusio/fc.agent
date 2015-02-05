@@ -1,8 +1,8 @@
 Changelog
 =========
 
-1.5.5 (unreleased)
-------------------
+1.6 (unreleased)
+----------------
 
 - Use new deletions API to clean up VM data on puppetmaster, KVM hosts,
   Ceph, Bacula, and Nagios.
