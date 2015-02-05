@@ -14,6 +14,7 @@ class Puppetmaster(object):
     """puppetmaster config generator."""
 
     autosign_conf = '/etc/puppet/autosign.conf'
+    cert_location = '/var/lib/puppet/ssl-master/ca/signed/{}.pem'
 
     def __init__(self, location, suffix):
         self.location = location
@@ -44,8 +45,10 @@ class Puppetmaster(object):
                     print 'Deactivating {}'.format(name)
                     log_call(['puppet', 'node', 'deactivate', name])
             if 'hard' in node['stages']:
-                print 'Cleaning {}'.format(name)
-                log_call(['puppet', 'node', 'clean', name])
+                cert = self.cert_location.format(name)
+                if os.path.exists(cert):
+                    print 'Cleaning {}'.format(name)
+                    log_call(['puppet', 'node', 'clean', name])
 
 
 def main():
