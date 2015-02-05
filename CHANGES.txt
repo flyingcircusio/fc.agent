@@ -4,8 +4,8 @@ Changelog
 1.5.5 (unreleased)
 ------------------
 
-- Use new deletions API to clean up VM deletions on puppetmaster and
-  KVM hosts.
+- Use new deletions API to clean up VM data on puppetmaster, KVM hosts,
+  Ceph, Bacula, and Nagios.
 
 - Fix bogus ProcessLookupError except clause.
 

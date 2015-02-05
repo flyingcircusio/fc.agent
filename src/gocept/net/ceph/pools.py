@@ -164,3 +164,8 @@ class Pool(object):
         self.cluster.rbd(['snap', 'rm', '{}/{}@{}'.format(
             self.name, rbdimage.image, rbdimage.snapshot)])
         self._images = None
+
+    def image_rm(self, rbdimage):
+        assert rbdimage.snapshot is None
+        self.cluster.rbd(['rm', '{}/{}'.format(self.name, rbdimage.image)])
+        self._images = None

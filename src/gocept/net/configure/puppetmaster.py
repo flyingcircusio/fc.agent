@@ -3,16 +3,10 @@ import gocept.net.configfile
 import gocept.net.directory
 import logging
 import os
-import subprocess
+from gocept.net.utils import log_call
+
 
 logger = logging.getLogger(__name__)
-
-
-def log_call(*args):
-    try:
-        subprocess.check_call(*args)
-    except Exception:
-        logger.exception()
 
 
 class Puppetmaster(object):
