@@ -195,16 +195,19 @@ def nodes():
     with gocept.net.directory.exceptions_screened():
         d = gocept.net.directory.Directory()
         deletions = d.deletions('vm')
+    reload_nagios = False
     for name, node in deletions.items():
         if 'soft' in node['stages']:
             try:
                 hostdir = (NagiosContacts.prefix +
                            '/etc/nagios/hosts/{}'.format(name))
                 if os.path.exists(hostdir):
+                    reload_nagios = True
                     shutil.rmtree(hostdir)
                 hostcfg = (NagiosContacts.prefix +
                            '/etc/nagios/hosts/{}.cfg'.format(name))
                 if os.path.exists(hostcfg):
+                    reload_nagios = True
                     os.unlink(hostcfg)
             except Exception, e:
                 logger.exception(e)
@@ -216,3 +219,6 @@ def nodes():
                     shutil.rmtree(perfdata)
             except Exception, e:
                 logger.exception(e)
+    if reload_nagios:
+        import pdb; pdb.set_trace()
+        os.system('/etc/init.d/nagios reload > /dev/null')
