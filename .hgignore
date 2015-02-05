@@ -11,3 +11,4 @@ lib64
 .ropeproject/
 *.sw[po]
 tags
+*.sublime*
