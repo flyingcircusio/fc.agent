@@ -41,8 +41,10 @@ class Puppetmaster(object):
                 status = json.loads(status)[0]
                 assert status['name'] == name
                 if not status['deactivated']:
+                    logging.info('Deactivating {}'.format(name))
                     log_call(['puppet', 'node', 'deactivate', name])
             if 'hard' in node['stages']:
+                logging.info('Deactivating {}'.format(name))
                 log_call(['puppet', 'node', 'clean', name])
 
 
