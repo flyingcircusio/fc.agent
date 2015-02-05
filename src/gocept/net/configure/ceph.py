@@ -139,12 +139,13 @@ class VolumeDeletions(object):
                 for image in ['{}.root', '{}.swap', '{}.tmp']:
                     image = image.format(name)
                     try:
-                        image = pool[image]
+                        rbd_image = pool[image]
                     except KeyError:
                         # Already deleted
                         pass
                     else:
-                        pool.image_rm(image)
+                        print("Purging volume {}".format(image))
+                        pool.image_rm(rbd_image)
 
 
 def purge_volumes():
