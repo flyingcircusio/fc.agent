@@ -1,9 +1,10 @@
 """Manage short-lived configuration of the puppet master."""
+from gocept.net.utils import log_call
 import gocept.net.configfile
 import gocept.net.directory
+import json
 import logging
 import os
-from gocept.net.utils import log_call
 
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,14 @@ class Puppetmaster(object):
         with gocept.net.directory.exceptions_screened():
             deletions = self.directory.deletions('vm')
         for name, node in deletions.items():
+            name = '{0}.{1}'.format(name, self.suffix)
             if 'soft' in node['stages']:
-                log_call(['puppet', 'node', 'deactivate', name])
+                status = log_call(
+                    ['puppet', 'node', '--render-as', 'json', 'status', name])
+                status = json.loads(status)[0]
+                assert status['name'] == name
+                if not status['deactivated']:
+                    log_call(['puppet', 'node', 'deactivate', name])
             if 'hard' in node['stages']:
                 log_call(['puppet', 'node', 'clean', name])
 

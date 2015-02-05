@@ -14,7 +14,7 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
         self.p_directory = mock.patch('gocept.net.directory.Directory')
         self.fake_directory = self.p_directory.start()
 
-        self.p_call = mock.patch('subprocess.check_call')
+        self.p_call = mock.patch('subprocess.check_output')
         self.fake_call = self.p_call.start()
         self.autosign_conf = tempfile.mktemp()
         gocept.net.configfile.ConfigFile.quiet = True
@@ -44,10 +44,16 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
             'node01': {'stages': ['prepare']},
             'node02': {'stages': ['prepare', 'soft']},
             'node03': {'stages': ['prepare', 'soft', 'hard']}}
+
+        def status(*args):
+            return '[{{"deactivated": null, "name":"{}"}}]'.format(args[0][-1])
+        self.fake_call.side_effect = status
         master = gocept.net.configure.puppetmaster.Puppetmaster(
             'here', 'example.com')
         master.delete_nodes()
         assert self.fake_call.call_args_list == [
-            call(['puppet', 'node', 'deactivate', 'node02']),
-            call(['puppet', 'node', 'deactivate', 'node03']),
-            call(['puppet', 'node', 'clean', 'node03'])]
+            call(['puppet', 'node', '--render-as', 'json', 'status', 'node02.example.com']),
+            call(['puppet', 'node', 'deactivate', 'node02.example.com']),
+            call(['puppet', 'node', '--render-as', 'json', 'status', 'node03.example.com']),
+            call(['puppet', 'node', 'deactivate', 'node03.example.com']),
+            call(['puppet', 'node', 'clean', 'node03.example.com'])]

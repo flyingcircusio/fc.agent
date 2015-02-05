@@ -22,7 +22,7 @@ def print(*args, **kw):
 
 def log_call(*args):
     try:
-        subprocess.check_call(*args)
+        return subprocess.check_output(*args)
     except Exception, e:
         logger.exception(e)
 
