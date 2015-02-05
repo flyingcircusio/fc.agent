@@ -220,5 +220,4 @@ def nodes():
             except Exception, e:
                 logger.exception(e)
     if reload_nagios:
-        import pdb; pdb.set_trace()
         os.system('/etc/init.d/nagios reload > /dev/null')
