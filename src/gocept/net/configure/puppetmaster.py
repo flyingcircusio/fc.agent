@@ -41,7 +41,11 @@ class Puppetmaster(object):
                     ['puppet', 'node', '--render-as', 'json', 'status', name])
                 status = json.loads(status)[0]
                 assert status['name'] == name
-                if not status['deactivated']:
+                # The dict will not contain the 'deactivated' field when the
+                # VM is completely purged. We return 'deleted' as a True
+                # marker for this case. Otherwise 'deactivated' contains the
+                # date when the node was deactivated, or null if it is active.
+                if not status.get('deactivated', 'deleted'):
                     print 'Deactivating {}'.format(name)
                     log_call(['puppet', 'node', 'deactivate', name])
             if 'hard' in node['stages']:

@@ -85,3 +85,23 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
         assert self.fake_call.call_args_list == [
             call(['puppet', 'node', '--render-as', 'json', 'status', 'node02.example.com']),
             call(['puppet', 'node', '--render-as', 'json', 'status', 'node03.example.com'])]
+
+    def test_node_deletion_deactivate_empty_after_clean(self):
+        self.fake_directory().deletions.return_value = {
+            'node00': {'stages': []},
+            'node01': {'stages': ['prepare']},
+            'node02': {'stages': ['prepare', 'soft']},
+            'node03': {'stages': ['prepare', 'soft', 'hard']}}
+
+        def status(*args):
+            # The puppet master returns an empty record with only the name
+            # when we cleaned it. This is a regression test to avoid spurious
+            # warnings.
+            return '[{{"name":"{}"}}]'.format(args[0][-1])
+        self.fake_call.side_effect = status
+        master = gocept.net.configure.puppetmaster.Puppetmaster(
+            'here', 'example.com')
+        master.delete_nodes()
+        assert self.fake_call.call_args_list == [
+            call(['puppet', 'node', '--render-as', 'json', 'status', 'node02.example.com']),
+            call(['puppet', 'node', '--render-as', 'json', 'status', 'node03.example.com'])]
