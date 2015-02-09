@@ -1,10 +1,10 @@
 Changelog
 =========
 
-1.7 (unreleased)
+1.6.1 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Fix bug for puppet master deactivation.
 
 
 1.6 (2015-02-05)
