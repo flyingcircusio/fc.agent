@@ -1,9 +1,10 @@
 """Configure pools on Ceph storage servers according to the directory."""
 
 from __future__ import print_function
-from ..directory import Directory, exceptions_screened
+
 from ..ceph import Pools, Cluster
 import argparse
+import gocept.net.directory
 import math
 import random
 
@@ -48,8 +49,9 @@ def pools():
                    'authenticate as (default: %(default)s)')
     args = p.parse_args()
     ceph = Cluster(args.conf, args.id, args.dry_run)
-    with exceptions_screened():
-        rpe = ResourcegroupPoolEquivalence(Directory(), ceph)
+    with gocept.net.directory.exceptions_screened():
+        rpe = ResourcegroupPoolEquivalence(
+            gocept.net.directory.Directory(), ceph)
         rpe.ensure()
 
 
@@ -74,7 +76,7 @@ class PgNumPolicy(object):
         pool.fix_options()
 
     def ensure_ratio(self, pool):
-        print('Pool {}: size={} / pg_num={} ratio is above {}, adding PGs'.\
+        print('Pool {}: size={} / pg_num={} ratio is above {}, adding PGs'.
               format(pool.name, pool.size_total_gb, pool.pg_num,
                      self.gb_per_pg))
         # round up to the nearest power of two
@@ -118,3 +120,45 @@ def pg_num():
     ceph = Cluster(args.conf, args.id, args.dry_run)
     pgnp = PgNumPolicy(args.gb_per_pg, ceph)
     pgnp.ensure()
+
+
+class VolumeDeletions(object):
+
+    def __init__(self, directory, cluster):
+        self.directory = directory
+        self.cluster = cluster
+        self.pools = Pools(self.cluster)
+
+    def ensure(self):
+        deletions = self.directory.deletions('vm')
+        for name, node in deletions.items():
+            # This really depends on the VM names adhering to our policy of
+            # <rg>[0-9]{2}
+            pool = self.pools[name[:-2]]
+            if 'purge' in node['stages']:
+                for image in ['{}.root', '{}.swap', '{}.tmp']:
+                    image = image.format(name)
+                    try:
+                        rbd_image = pool[image]
+                    except KeyError:
+                        # Already deleted
+                        pass
+                    else:
+                        print("Purging volume {}".format(image))
+                        pool.image_rm(rbd_image)
+
+
+def purge_volumes():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('-n', '--dry-run', help='show what would be done only',
+                   default=False, action='store_true')
+    p.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
+                   help='path to ceph.conf (default: %(default)s)')
+    p.add_argument('-i', '--id', default='admin', metavar='USER',
+                   help='rados user (without the "client." prefix) to '
+                   'authenticate as (default: %(default)s)')
+    args = p.parse_args()
+    ceph = Cluster(args.conf, args.id, args.dry_run)
+    with gocept.net.directory.exceptions_screened():
+        volumes = VolumeDeletions(gocept.net.directory.Directory(), ceph)
+        volumes.ensure()

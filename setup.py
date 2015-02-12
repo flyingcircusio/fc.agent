@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='fc.agent',
-    version='1.5.5.dev0',
+    version='1.6.2.dev0',
     author='gocept',
     author_email='mail@gocept.com',
     url='http://bitbucket.org/flyingcircus/fc.agent/',
@@ -32,14 +32,17 @@ system configuration.
     entry_points={
         'console_scripts': [
             'list-maintenance = gocept.net.maintenance.script:list',
+            'localconfig-bacula-purge-stamps = gocept.net.configure.bacula:purge_stamps',
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
             'localconfig-ceph-pools = gocept.net.configure.ceph:pools',
+            'localconfig-ceph-purge-volumes = gocept.net.configure.ceph:purge_volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
             'localconfig-iptables-inputrules = gocept.net.configure.iptables:inputrules',
             'localconfig-kvm-init = gocept.net.configure.kvm:ensure_vms',
             'localconfig-nagioscontacts = gocept.net.configure.nagios:contacts',
+            'localconfig-nagios-nodes = gocept.net.configure.nagios:nodes',
             'localconfig-postfix-master = gocept.net.configure.postfix:master',
             'localconfig-puppetmaster = gocept.net.configure.puppetmaster:main',
             'localconfig-resize2fs-vmroot = gocept.net.configure.resize2fs:check_grow',

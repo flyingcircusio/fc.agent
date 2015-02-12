@@ -3,14 +3,17 @@
 # description field are excluded from mails but still able to log in.
 
 import gocept.net.directory
-import StringIO
 import gocept.net.ldaptools
 import hashlib
 import ldap
+import logging
 import os
 import os.path
 import re
+import shutil
+import StringIO
 
+logger = logging.getLogger(__name__)
 
 CONTACT_TEMPLATE = """
 define contact {{
@@ -111,7 +114,6 @@ class NagiosContacts(object):
         return self.search(
             'ou=People', '(&(cn=*)(objectClass=organizationalPerson))')
 
-
     def contacts(self):
         """List all users as contacts"""
         result = StringIO.StringIO()
@@ -182,9 +184,40 @@ class NagiosContacts(object):
 
 
 def contacts():
-    with gocept.net.directory.exceptions_screened():
         configuration = NagiosContacts()
         configuration.contact_groups()
         configuration.contacts()
         configuration.contacts_technical()
         configuration.finish()
+
+
+def nodes():
+    with gocept.net.directory.exceptions_screened():
+        d = gocept.net.directory.Directory()
+        deletions = d.deletions('vm')
+    reload_nagios = False
+    for name, node in deletions.items():
+        if 'soft' in node['stages']:
+            try:
+                hostdir = (NagiosContacts.prefix +
+                           '/etc/nagios/hosts/{}'.format(name))
+                if os.path.exists(hostdir):
+                    reload_nagios = True
+                    shutil.rmtree(hostdir)
+                hostcfg = (NagiosContacts.prefix +
+                           '/etc/nagios/hosts/{}.cfg'.format(name))
+                if os.path.exists(hostcfg):
+                    reload_nagios = True
+                    os.unlink(hostcfg)
+            except Exception, e:
+                logger.exception(e)
+        if 'purge' in node['stages']:
+            try:
+                perfdata = (NagiosContacts.prefix +
+                            '/var/nagios/perfdata/{}'.format(name))
+                if os.path.exists(perfdata):
+                    shutil.rmtree(perfdata)
+            except Exception, e:
+                logger.exception(e)
+    if reload_nagios:
+        os.system('/etc/init.d/nagios reload > /dev/null')

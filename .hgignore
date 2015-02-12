@@ -9,4 +9,7 @@ lib64
 local
 *.pyc
 .Python
+.ropeproject/
+*.sw[po]
 tags
+*.sublime*

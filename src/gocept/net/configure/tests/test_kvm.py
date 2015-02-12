@@ -9,16 +9,16 @@ import unittest
 
 @pytest.fixture(autouse=True)
 def prefix_kvm_paths(tmpdir, monkeypatch):
-    os.mkdir(str(tmpdir/'etc'))
-    os.mkdir(str(tmpdir/'etc/kvm'))
-    os.mkdir(str(tmpdir/'etc/conf.d'))
-    os.mkdir(str(tmpdir/'etc/init.d'))
-    os.mkdir(str(tmpdir/'etc/qemu'))
-    os.mkdir(str(tmpdir/'etc/qemu/vm'))
-    os.mkdir(str(tmpdir/'etc/runlevels'))
-    os.mkdir(str(tmpdir/'etc/runlevels/default'))
-    os.mkdir(str(tmpdir/'run'))
-    monkeypatch.setattr(VM, 'root',  str(tmpdir))
+    os.mkdir(str(tmpdir / 'etc'))
+    os.mkdir(str(tmpdir / 'etc/kvm'))
+    os.mkdir(str(tmpdir / 'etc/conf.d'))
+    os.mkdir(str(tmpdir / 'etc/init.d'))
+    os.mkdir(str(tmpdir / 'etc/qemu'))
+    os.mkdir(str(tmpdir / 'etc/qemu/vm'))
+    os.mkdir(str(tmpdir / 'etc/runlevels'))
+    os.mkdir(str(tmpdir / 'etc/runlevels/default'))
+    os.mkdir(str(tmpdir / 'run'))
+    monkeypatch.setattr(VM, 'root', str(tmpdir))
 
 
 def make_vm(**kw):
@@ -61,6 +61,34 @@ class KVMConfigTest(unittest.TestCase):
         assert e.exception.code == 0
         self.assertEquals(ensure.call_count, 1)
 
+    def test_node_deletion(self):
+        self.fake_directory().list_virtual_machines.return_value = []
+        self.fake_directory().deletions.return_value = {
+            'node00': {'stages': []},
+            'node01': {'stages': ['prepare']},
+            'node02': {'stages': ['prepare', 'soft']},
+            'node03': {'stages': ['prepare', 'soft', 'hard']}}
+        cfgs = {}
+        for node in self.fake_directory().deletions.return_value.keys():
+            cfgs[node] = VM.configfile.format(root=VM.root, name=node)
+            with open(cfgs[node], 'w') as f:
+                f.write('test')
+        with self.assertRaises(SystemExit) as e:
+            ensure_vms()
+        assert e.exception.code == 0
+        assert os.path.exists(cfgs['node00'])
+        assert os.path.exists(cfgs['node01'])
+        assert os.path.exists(cfgs['node02'])
+        assert not os.path.exists(cfgs['node03'])
+        # Running twice must work without exploding
+        with self.assertRaises(SystemExit) as e:
+            ensure_vms()
+        assert e.exception.code == 0
+        assert os.path.exists(cfgs['node00'])
+        assert os.path.exists(cfgs['node01'])
+        assert os.path.exists(cfgs['node02'])
+        assert not os.path.exists(cfgs['node03'])
+
 
 class VMTest(unittest.TestCase):
 
@@ -96,19 +124,19 @@ parameters:
 
     def test_vm_old_files_migrated(self):
         vm = VM(make_vm(online=True, kvm_host='foo'))
-        files = [vm.root+'/run/kvm.test00.pid',
-                 vm.root+'/run/kvm.test00.cfg',
-                 vm.root+'/run/kvm.test00.cfg.in',
-                 vm.root+'/run/kvm.test00.opt',
-                 vm.root+'/run/kvm.test00.opt.in',
-                 vm.root+'/etc/runlevels/default/kvm.test00',
-                 vm.root+'/etc/conf.d/kvm.test00',
-                 vm.root+'/etc/kvm/test00.opt',
-                 vm.root+'/etc/kvm/test00.cfg',
-                 vm.root+'/etc/init.d/kvm.test00']
+        files = [vm.root + '/run/kvm.test00.pid',
+                 vm.root + '/run/kvm.test00.cfg',
+                 vm.root + '/run/kvm.test00.cfg.in',
+                 vm.root + '/run/kvm.test00.opt',
+                 vm.root + '/run/kvm.test00.opt.in',
+                 vm.root + '/etc/runlevels/default/kvm.test00',
+                 vm.root + '/etc/conf.d/kvm.test00',
+                 vm.root + '/etc/kvm/test00.opt',
+                 vm.root + '/etc/kvm/test00.cfg',
+                 vm.root + '/etc/init.d/kvm.test00']
         for f in files:
             open(f, 'w')
         vm.ensure_config()
-        assert os.path.exists(vm.root+'/run/qemu.test00.pid')
+        assert os.path.exists(vm.root + '/run/qemu.test00.pid')
         for f in files:
             assert not os.path.exists(f)
