@@ -1,6 +1,3 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Manage maintenance requests spool directories."""
 
 from __future__ import print_function
@@ -73,7 +70,7 @@ class ReqManager(object):
             except AttributeError:
                 starttime = req.starttime
             print('({0}) scheduled: {1}, estimate: {2}, state: {3}'.format(
-                req.shortid, starttime, req.estimate_readable, req.state),
+                req.uuid, starttime, req.estimate_readable, req.state),
                 file=out)
             if req.comment:
                 print(req.comment, file=out)
@@ -110,7 +107,7 @@ class ReqManager(object):
 
     @require_lock
     def add_request(self, estimate, script=None, comment=None,
-                    applicable=None, _uuid=None):
+                    applicable=None, uuid=None):
         """Create new request object and save it to disk.
 
         The Request instance is initialized with the passed arguments and a
@@ -119,13 +116,13 @@ class ReqManager(object):
         reqid = self._allocate_id()
         request = gocept.net.maintenance.Request(
             reqid, estimate, script, comment,
-            applicable=applicable, path=self._path(reqid), _uuid=_uuid)
+            applicable=applicable, path=self._path(reqid), uuid=uuid)
         request.save()
         LOG.info('creating new maintenance request %s', request.uuid)
         if not request.script:
             LOG.warning("(req %s) empty script -- hope that's ok",
-                        request.shortid)
-        LOG.debug('(req %s) saving to %s', request.shortid, request.path)
+                        request.uuid)
+        LOG.debug('(req %s) saving to %s', request.uuid, request.path)
         return request
 
     def load_request(self, reqid):
@@ -161,9 +158,9 @@ class ReqManager(object):
                 tempfail.append((request.starttime, request))
             elif request.state is gocept.net.maintenance.Request.DUE:
                 due.append((request.starttime, request))
-        for time, request in sorted(tempfail):
+        for _time, request in sorted(tempfail):
             yield request
-        for time, request in sorted(due):
+        for _time, request in sorted(due):
             yield request
 
     @require_lock
@@ -179,13 +176,13 @@ class ReqManager(object):
         for key, val in activities.items():
             try:
                 req = requests[key]
-                LOG.debug('(req %s) updating request', req.shortid)
+                LOG.debug('(req %s) updating request', req.uuid)
                 if req.update(val['time']):
                     LOG.info('(req %s) changing start time to %s',
-                             req.shortid, val['time'])
+                             req.uuid, val['time'])
             except KeyError:
                 LOG.warning('(req %s) request disappeared, marking as deleted',
-                            req.shortid)
+                            req.uuid)
                 deleted_requests.add(key)
         if deleted_requests:
             self.directory.end_maintenance(dict(
@@ -202,17 +199,17 @@ class ReqManager(object):
         """
         for request in self.runnable_requests():
             LOG.debug('next request is %s, starttime: %s',
-                      request.shortid, request.starttime)
+                      request.uuid, request.starttime)
             request.execute()
             state = request.state
             if state is gocept.net.maintenance.Request.TEMPFAIL:
                 LOG.info('(req %s) returned TEMPFAIL, suspending',
-                         request.shortid)
+                         request.uuid)
                 break
             if state in (gocept.net.maintenance.Request.ERROR,
                          gocept.net.maintenance.Request.RETRYLIMIT):
                 LOG.warning('(req %s) returned %s',
-                            request.shortid, state.upper())
+                            request.uuid, state.upper())
 
     @require_lock
     @require_directory
@@ -234,6 +231,6 @@ class ReqManager(object):
         LOG.debug('invoking end_maintenance(%r)', finished)
         self.directory.end_maintenance(finished)
         for reqid, request in archive.iteritems():
-            LOG.info('(req %s) completed, archiving request', request.shortid)
+            LOG.info('(req %s) completed, archiving request', request.uuid)
             os.rename(os.path.join(self.requestsdir, str(reqid)),
                       os.path.join(self.archivedir, str(reqid)))

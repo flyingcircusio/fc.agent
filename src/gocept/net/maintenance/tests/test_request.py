@@ -14,7 +14,7 @@ import shutil
 import StringIO
 import tempfile
 import unittest
-import uuid
+import uuid as pyuuid
 
 
 class RequestTest(unittest.TestCase):
@@ -37,7 +37,7 @@ class RequestTest(unittest.TestCase):
   "starttime": "2011-07-25T16:09:41+00:00",
   "script": "echo",
   "applicable": "true",
-  "_uuid": "2345fa72-7f9f-42c2-aa33-6eaf5d891e29"
+  "uuid": "2345fa72-7f9f-42c2-aa33-6eaf5d891e29"
 }
 """)
         self.assertEqual(
@@ -45,26 +45,27 @@ class RequestTest(unittest.TestCase):
                 16, 950, 'echo', 'user notice',
                 datetime.datetime(2011, 7, 25, 16, 9, 41, tzinfo=pytz.UTC),
                 'true',
-                _uuid=uuid.UUID('2345fa72-7f9f-42c2-aa33-6eaf5d891e29')))
+                uuid=pyuuid.UUID('2345fa72-7f9f-42c2-aa33-6eaf5d891e29')))
 
     def test_serialize(self):
         io = StringIO.StringIO()
         request = Request(
             51, 900, '/bin/true', 'do something',
             datetime.datetime(2011, 7, 25, 3, 5, tzinfo=pytz.UTC),
-            'check_something', _uuid='0ae23c8f-46e0-11e3-8000-000000000000')
+            'check_something', uuid='0ae23c8f-46e0-11e3-8000-001fd0a3d7a6')
         request.serialize(io)
-        self.assertMultiLineEqual(io.getvalue(), """\
+        self.maxDiff = 10000
+        self.assertMultiLineEqual("""\
 {
-  "comment": "do something", 
-  "script": "/bin/true", 
-  "_uuid": "0ae23c8f-46e0-11e3-8000-000000000000", 
-  "applicable": "check_something", 
-  "reqid": 51, 
-  "starttime": "2011-07-25T03:05:00+00:00", 
+  "comment": "do something",\x20
+  "uuid": "iSDJhfaauzAEMRtAaNXPw3",\x20
+  "script": "/bin/true",\x20
+  "applicable": "check_something",\x20
+  "reqid": 51,\x20
+  "starttime": "2011-07-25T03:05:00+00:00",\x20
   "estimate": 900
 }
-""")
+""", io.getvalue())
 
     def test_save(self):
         path = os.path.join(self.dir, '19')
@@ -74,11 +75,11 @@ class RequestTest(unittest.TestCase):
                         u'Request.save did not create data file')
 
     def test_eq(self):
-        stub_uuid = uuid.UUID('11afa30a-46de-11e3-8000-000000000000')
-        self.assertEqual(Request(11, 39, _uuid=stub_uuid),
-                         Request(11, 39, _uuid=stub_uuid))
-        self.assertNotEqual(Request(11, 39, _uuid=stub_uuid),
-                            Request(12, 39, _uuid=stub_uuid))
+        stub_uuid = pyuuid.UUID('11afa30a-46de-11e3-8000-000000000000')
+        self.assertEqual(Request(11, 39, uuid=stub_uuid),
+                         Request(11, 39, uuid=stub_uuid))
+        self.assertNotEqual(Request(11, 39, uuid=stub_uuid),
+                            Request(12, 39, uuid=stub_uuid))
 
     def test_repr_rpc(self):
         request = Request(66, 160, 'script', 'a comment')
@@ -292,12 +293,17 @@ class RequestTest(unittest.TestCase):
         self.assertEqual(r.starttime, datetime.datetime(
             2011, 7, 28, 14, 22, tzinfo=pytz.utc))
 
-    def test_shortid(self):
+    def test_uuid_encode(self):
         r = Request(0, 1, path=self.dir,
-                    _uuid='8354bbdc-46e1-11e3-8000-000000000000')
-        self.assertEqual('8354bbdc', r.shortid)
+                    uuid=pyuuid.UUID('f198be2e-b826-11e4-a65e-001fd0a3d7a6'))
+        self.assertEqual('hQiTKzANzaJ33zRjoSkAzk', r.uuid)
 
-    def test_uuid(self):
+    def test_uuid_decode_short(self):
         r = Request(0, 1, path=self.dir,
-                    _uuid='8354bbdc-46e1-11e3-8000-000000000000')
-        self.assertEqual('8354bbdc-46e1-11e3-8000-000000000000', r.uuid)
+                    uuid='hQiTKzANzaJ33zRjoSkAzk')
+        self.assertEqual('hQiTKzANzaJ33zRjoSkAzk', r.uuid)
+
+    def test_uuid_decode_long(self):
+        r = Request(0, 1, path=self.dir,
+                    uuid='f198be2e-b826-11e4-a65e-001fd0a3d7a6')
+        self.assertEqual('hQiTKzANzaJ33zRjoSkAzk', r.uuid)

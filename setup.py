@@ -28,7 +28,9 @@ system configuration.
         'pytz',
         'iso8601>=0.1.4',
         'configobj>=4.7',
-        'netaddr>=0.7'],
+        'netaddr>=0.7',
+        'shortuuid>=0.4',
+    ],
     entry_points={
         'console_scripts': [
             'list-maintenance = gocept.net.maintenance.script:list',

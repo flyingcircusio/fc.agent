@@ -8,11 +8,8 @@ import os
 import os.path
 import pytest
 import pytz
-import shutil
-import tempfile
 import time
-import unittest
-import uuid
+import uuid as pyuuid
 
 
 @pytest.yield_fixture
@@ -39,9 +36,10 @@ def request_population(n, dir):
         requests = []
         for i in range(n):
             req = reqmanager.add_request(
-                1, 'exit 0', _uuid=uuid.UUID('{:032d}'.format(i)))
+                1, 'exit 0', uuid=pyuuid.UUID('{:032d}'.format(i + 2**32)))
             requests.append(req)
         yield (reqmanager, requests)
+
 
 def test_init_should_create_directories(tmpdir):
     spooldir = str(tmpdir/'maintenance')
@@ -63,7 +61,6 @@ def test_add_request_should_set_path(tmpdir):
     with ReqManager(str(tmpdir)) as rm:
         request = rm.add_request(30, 'script', 'comment')
     assert request.path == tmpdir / 'requests' / '0'
-
 
 
 def test_add_should_init_seq_to_allocate_ids(tmpdir, request_cls):
@@ -97,37 +94,33 @@ def test_schedule_emptylist(tmpdir, dir_fac):
 
 
 def test_schedule_should_update_request_time(tmpdir, dir_fac):
-    directory = dir_fac.return_value
-    directory.schedule_maintenance = mock.Mock()
-    directory.schedule_maintenance.return_value = {
-        '00000000-0000-0000-0000-000000000000': {
-            'time': '2011-07-25T10:55:28.368789+00:00'},
-        '00000000-0000-0000-0000-000000000001': {
-            'time': None}}
     with request_population(2, tmpdir) as (rm, req):
+        directory = dir_fac.return_value
+        directory.schedule_maintenance = mock.Mock()
+        directory.schedule_maintenance.return_value = {
+            req[0].uuid: {'time': '2011-07-25T10:55:28.368789+00:00'},
+            req[1].uuid: {'time': None}}
         rm.update_schedule()
         assert rm.load_request(0).starttime == datetime.datetime(
             2011, 7, 25, 10, 55, 28, 368789, pytz.UTC)
         assert rm.load_request(1).starttime is None
-    directory.schedule_maintenance.assert_called_with({
-        '00000000-0000-0000-0000-000000000000': {
-            'estimate': 1, 'comment': None},
-        '00000000-0000-0000-0000-000000000001': {
-            'estimate': 1, 'comment': None}})
+        directory.schedule_maintenance.assert_called_with({
+            req[0].uuid: {'estimate': 1, 'comment': None},
+            req[1].uuid: {'estimate': 1, 'comment': None}})
 
 
 def test_schedule_mark_off_deleted_requests(tmpdir, dir_fac):
-    directory = dir_fac.return_value
-    directory.schedule_maintenance = mock.Mock()
-    directory.schedule_maintenance.return_value = {
-        '00000000-0000-0000-0000-000000000000': {
-            'time': '2011-07-25T10:55:28.368789+00:00'},
-        '00000000-0000-0000-0000-000000000001': {'time': None}}
-    directory.end_maintenance = mock.Mock()
     with request_population(1, tmpdir) as (rm, req):
+        directory = dir_fac.return_value
+        directory.schedule_maintenance = mock.Mock()
+        directory.schedule_maintenance.return_value = {
+            req[0].uuid: {'time': '2011-07-25T10:55:28.368789+00:00'},
+            'jsHgdSNWx3nVMVLAMaY3tf': {'time': None}}
+        directory.end_maintenance = mock.Mock()
         rm.update_schedule()
-    directory.end_maintenance.assert_called_with({
-        '00000000-0000-0000-0000-000000000001': {'result': 'deleted'}})
+        directory.end_maintenance.assert_called_with({
+            'jsHgdSNWx3nVMVLAMaY3tf': {'result': 'deleted'}})
+
 
 def test_load_should_return_request(tmpdir):
     with ReqManager(str(tmpdir)) as rm:
@@ -187,23 +180,21 @@ def test_execute_requests(tmpdir, now):
     assert req[2].state == Request.PENDING
 
 
-
 def test_archive(tmpdir, dir_fac):
     directory = dir_fac.return_value
     directory.end_maintenance = mock.Mock()
     with ReqManager(str(tmpdir)) as rm:
         request = rm.add_request(
             1, script='exit 0',
-            _uuid='f02c4745-46e5-11e3-8000-000000000000')
+            uuid='f02c4745-46e5-11e3-8000-000000000000')
         request.execute()
         rm.archive_requests()
         assert not os.path.exists(rm.requestsdir+'/0'), \
             'request 0 should not exist in requestsdir'
         assert os.path.exists(rm.archivedir+'/0'), \
             'request 0 should exist in archivedir'
-    directory.end_maintenance.assert_called_with({
-        'f02c4745-46e5-11e3-8000-000000000000': {
-            'duration': 0, 'result': 'success'}})
+        directory.end_maintenance.assert_called_with({
+            request.uuid: {'duration': 0, 'result': 'success'}})
 
 
 @pytest.yield_fixture
@@ -216,6 +207,7 @@ def now():
 def dir_fac():
     with mock.patch('gocept.net.directory.Directory') as dir_fac:
         yield dir_fac
+
 
 @pytest.yield_fixture
 def request_cls():
@@ -235,11 +227,11 @@ def test_str(tmpdir, tz_utc, now):
         req[2].comment = 'reason'
         req[2].save()
         assert """\
-(00000000) scheduled: None, estimate: 1s, state: success
+({0}) scheduled: None, estimate: 1s, state: success
 
-(00000000) scheduled: 2011-07-28 11:01:00 UTC, estimate: 1s, state: due
+({1}) scheduled: 2011-07-28 11:01:00 UTC, estimate: 1s, state: due
 
-(00000000) scheduled: None, estimate: 1s, state: pending
+({2}) scheduled: None, estimate: 1s, state: pending
 reason
 
-""" == str(rm)
+""".format(req[0].uuid, req[1].uuid, req[2].uuid) == str(rm)

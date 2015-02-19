@@ -1,6 +1,3 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Scheduled maintenance requests and actions."""
 
 from __future__ import print_function
@@ -11,8 +8,9 @@ import iso8601
 import json
 import logging
 import os
+import shortuuid
 import subprocess
-import uuid
+import uuid as pyuuid
 
 LOG = logging.getLogger(__name__)
 
@@ -67,20 +65,22 @@ class Request(object):
         return cls(**data)
 
     def __init__(self, reqid, estimate, script=None, comment=None,
-                 starttime=None, applicable=None, path=None, _uuid=None):
+                 starttime=None, applicable=None, path=None, uuid=None):
         """Create Request.
 
-        `reqid` - numerical request id
+        `reqid` - numerical request id (sequence number)
         `estimate` - execution time estimate in seconds
         `script` - command that is to be executed via sh
         `comment` - reason for downtime, used to inform users
         `starttime` - scheduled start time
         `applicable` - script to test is the script is applicable
         `path` - path name to request's base directory
-        `uuid` - unique ID to identify request with the directory
+        `uuid` - unique ID to identify request at gocept.directory
         """
         if not estimate > 0:
             raise RuntimeError('estimate must be positive', estimate)
+        if uuid is None:  # auto-allocate
+            uuid = pyuuid.uuid1()
         self.reqid = reqid
         self.estimate = estimate
         self.script = script
@@ -88,10 +88,7 @@ class Request(object):
         self.starttime = starttime
         self.applicable = applicable
         self.path = path
-        if _uuid:
-            self._uuid = uuid.UUID(str(_uuid))
-        else:
-            self._uuid = uuid.uuid1()
+        self.uuid = uuid
 
     def __eq__(self, other):
         if not isinstance(other, Request):
@@ -115,12 +112,13 @@ class Request(object):
             'script': self.script,
             'comment': self.comment,
             'applicable': self.applicable,
-            '_uuid': str(self._uuid)
+            'uuid': self.uuid,
         }
         if self.starttime:
             data['starttime'] = self.starttime.isoformat()
         json.dump(data, stream, indent=2)
-        print('', file=stream)
+        stream.write('\n')
+        stream.flush()
 
     def save(self):
         if not self.path:
@@ -129,7 +127,6 @@ class Request(object):
             os.mkdir(self.path)
         with open(os.path.join(self.path, 'data'), 'w') as f:
             self.serialize(f)
-            f.flush()
             os.fsync(f)
 
     def start(self):
@@ -146,7 +143,7 @@ class Request(object):
 
     def spawn(self, command):
         """Run shell script in current request's context."""
-        LOG.debug('(req %s) running %r' % (self.shortid, command))
+        LOG.debug('(req %s) running %r' % (self.uuid, command))
         p = subprocess.Popen([command], shell=True,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              stdin=subprocess.PIPE, cwd=self.path,
@@ -156,20 +153,20 @@ class Request(object):
             f_stdout.write(stdout)
         with open(os.path.join(self.path, 'stderr'), 'a') as f_stderr:
             f_stderr.write(stderr)
-            LOG.debug('(req %s) returncode: %s' % (self.shortid, p.returncode))
+            LOG.debug('(req %s) returncode: %s' % (self.uuid, p.returncode))
         return p.returncode
 
     def is_applicable(self):
         """Test this activity's applicability."""
         if not self.applicable:
             return True
-        LOG.debug('(req %s) testing if activity is applicable' % self.shortid)
+        LOG.debug('(req %s) testing if activity is applicable' % self.uuid)
         exitcode = self.spawn(self.applicable)
         with open(os.path.join(self.path, 'applicable'), 'a') as f:
             print(exitcode, file=f)
         if exitcode != 0:
             LOG.info('(req %s) not applicable, terminating activity',
-                     self.shortid)
+                     self.uuid)
             return False
         return True
 
@@ -180,7 +177,7 @@ class Request(object):
         consider the maintenance activity as non-applicable and archive
         the script immediately.
         """
-        LOG.info('(req %s) starting execution', self.shortid)
+        LOG.info('(req %s) starting execution', self.uuid)
         self.start()
         self.incr_attempt()
         if self.script and self.is_applicable():
@@ -190,7 +187,7 @@ class Request(object):
         with open(os.path.join(self.path, 'exitcode'), 'a') as f:
             print(exitcode, file=f)
         if exitcode != 0:
-            LOG.warning('(req %s) script exited with %i', self.shortid,
+            LOG.warning('(req %s) script exited with %i', self.uuid,
                         exitcode)
         self.stop()
 
@@ -310,10 +307,15 @@ class Request(object):
         return {'estimate': self.estimate, 'comment': self.comment}
 
     @property
-    def shortid(self):
-        """Short version of the UUID for user display."""
-        return str(self._uuid).split('-', 1)[0]
-
-    @property
     def uuid(self):
-        return str(self._uuid)
+        return shortuuid.encode(self._uuid)
+
+    @uuid.setter
+    def uuid(self, value):
+        if isinstance(value, pyuuid.UUID):
+            self._uuid = value
+            return
+        try:
+            self._uuid = shortuuid.decode(str(value))
+        except ValueError:
+            self._uuid = pyuuid.UUID(str(value))
