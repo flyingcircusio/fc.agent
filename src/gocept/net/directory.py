@@ -1,7 +1,3 @@
-# Copyright (c) 2012 gocept gmbh & co. kg
-# See also LICENSE.txt
-
-import optparse
 import os
 import re
 import socket
@@ -31,17 +27,6 @@ def Directory():
         socket.setdefaulttimeout(300)
     return xmlrpclib.ServerProxy('%s://%s:%s@%s%s' % (
         parts.scheme, user, password, parts.netloc, parts.path))
-
-
-def redundancy_groups():
-    op = optparse.OptionParser()
-    op.add_option('-l', '--location', default='', help='filter by location')
-    op.add_option('-r', '--role', default='', help='filter by role')
-    options, args = op.parse_args()
-    directory = Directory()
-    for group, nodes in directory.list_redundant_nodes(
-            options.location, options.role).items():
-        print group, ' '.join(nodes)
 
 
 def exceptions_screened():

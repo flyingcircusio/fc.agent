@@ -1,11 +1,12 @@
 from __future__ import print_function
 from gocept.net.maintenance import ReqManager, Request
+from gocept.net.utils import now
 
 import contextlib
 import datetime
+import freezegun
 import mock
 import os
-import os.path
 import pytest
 import pytz
 import time
@@ -24,6 +25,18 @@ def tz_utc():
     else:
         del os.environ['TZ']
     time.tzset()
+
+
+@pytest.yield_fixture
+def dir_fac():
+    with mock.patch('gocept.net.directory.Directory') as dir_fac:
+        yield dir_fac
+
+
+@pytest.yield_fixture
+def request_cls():
+    with mock.patch('gocept.net.maintenance.Request') as r:
+        yield r
 
 
 @contextlib.contextmanager
@@ -139,64 +152,62 @@ def test_current_requests(tmpdir):
                 req[1].uuid: req[1]} == rm.requests()
 
 
-def test_runnable_requests(tmpdir, now):
-    now.return_value = datetime.datetime(
-        2011, 7, 26, 19, 40, tzinfo=pytz.utc)
-    # req3 is active and should be returned first. req4 has been partially
-    # completed and should be resumed directly after. req0 and req1 are
-    # due, but req1's starttime is older so it should precede req0's. req2
-    # is still pending and should not be returned.
-    with request_population(5, tmpdir) as (rm, req):
-        req[0].starttime = now() - datetime.timedelta(30)
-        req[0].save()
-        req[1].starttime = now() - datetime.timedelta(45)
-        req[1].save()
-        req[3].start()
-        req[4].script = 'exit 75'
-        req[4].save()
-        req[4].execute()
-        assert list(rm.runnable_requests()) == [req[3], req[4], req[1], req[0]]
+def test_runnable_requests(tmpdir):
+    with freezegun.freeze_time('2011-07-26 19:40:00', tz_offset=0):
+        # req3 is active and should be returned first. req4 has been partially
+        # completed and should be resumed directly after. req0 and req1 are
+        # due, but req1's starttime is older so it should precede req0's. req2
+        # is still pending and should not be returned.
+        with request_population(5, tmpdir) as (rm, req):
+            req[0].starttime = now() - datetime.timedelta(30)
+            req[0].save()
+            req[1].starttime = now() - datetime.timedelta(45)
+            req[1].save()
+            req[3].start()
+            req[4].script = 'exit 75'
+            req[4].save()
+            req[4].execute()
+            assert list(rm.runnable_requests()) == [
+                req[3], req[4], req[1], req[0]]
 
 
-def test_execute_requests(tmpdir, now):
+def test_execute_requests(tmpdir):
     # Three requests: the first two are marked as due by the directory
     # scheduler. The first runs to completion, but the second exits with
     # TEMPFILE. The first request should be archived and processing should
     # be suspended after the second request. The third request should not
     # be touched.
-    now.return_value = datetime.datetime(
-        2011, 7, 27, 7, 12, tzinfo=pytz.utc)
-    with request_population(3, tmpdir) as (rm, req):
-        req[0].starttime = datetime.datetime(
-            2011, 7, 27, 7, 0, tzinfo=pytz.utc)
-        req[0].save()
-        req[1].script = 'exit 75'
-        req[1].starttime = datetime.datetime(
-            2011, 7, 27, 7, 10, tzinfo=pytz.utc)
-        req[1].save()
-        rm.execute_requests()
-    assert req[0].state == Request.SUCCESS
-    assert req[1].state == Request.TEMPFAIL
-    assert req[2].state == Request.PENDING
+    with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
+        with request_population(3, tmpdir) as (rm, req):
+            req[0].starttime = datetime.datetime(
+                2011, 7, 27, 7, 0, tzinfo=pytz.utc)
+            req[0].save()
+            req[1].script = 'exit 75'
+            req[1].starttime = datetime.datetime(
+                2011, 7, 27, 7, 10, tzinfo=pytz.utc)
+            req[1].save()
+            rm.execute_requests()
+        assert req[0].state == Request.SUCCESS
+        assert req[1].state == Request.TEMPFAIL
+        assert req[2].state == Request.PENDING
 
 
-def test_postpone(tmpdir, dir_fac, now):
+def test_postpone(tmpdir, dir_fac):
     directory = dir_fac.return_value
     directory.postpone_maintenance = mock.Mock()
-    now.return_value = datetime.datetime(
-        2011, 7, 27, 7, 12, tzinfo=pytz.utc)
-    with ReqManager(str(tmpdir)) as rm:
-        req = rm.add_request(300, script='exit 69')
-        req.starttime = now()
-        req.save()
-        assert req.state == Request.DUE
-        rm.execute_requests()
-        rm.postpone_requests()
-        req = rm.load_request(req.reqid)
-        assert req.state == Request.POSTPONE
-        assert req.starttime is None
-        directory.postpone_maintenance.assert_called_with({
-            req.uuid: {'postpone_by': 300}})
+    with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
+        with ReqManager(str(tmpdir)) as rm:
+            req = rm.add_request(300, script='exit 69')
+            req.starttime = now()
+            req.save()
+            assert req.state == Request.DUE
+            rm.execute_requests()
+            rm.postpone_requests()
+            req = rm.load_request(req.reqid)
+            assert req.state == Request.POSTPONE
+            assert req.starttime is None
+            directory.postpone_maintenance.assert_called_with({
+                req.uuid: {'postpone_by': 300}})
 
 
 def test_archive(tmpdir, dir_fac):
@@ -216,36 +227,17 @@ def test_archive(tmpdir, dir_fac):
             request.uuid: {'duration': 0, 'result': 'success'}})
 
 
-@pytest.yield_fixture
-def now():
-    with mock.patch('gocept.net.utils.now') as now:
-        yield now
-
-
-@pytest.yield_fixture
-def dir_fac():
-    with mock.patch('gocept.net.directory.Directory') as dir_fac:
-        yield dir_fac
-
-
-@pytest.yield_fixture
-def request_cls():
-    with mock.patch('gocept.net.maintenance.Request') as r:
-        yield r
-
-
-def test_str(tmpdir, tz_utc, now):
-    now.return_value = datetime.datetime(
-        2011, 7, 28, 11, 3, tzinfo=pytz.utc)
-    with request_population(3, tmpdir) as (rm, req):
-        rm.localtime = pytz.utc
-        req[0].execute()
-        req[1].starttime = datetime.datetime(
-            2011, 7, 28, 11, 1, tzinfo=pytz.utc)
-        req[1].save()
-        req[2].comment = 'reason'
-        req[2].save()
-        assert """\
+def test_str(tmpdir, tz_utc):
+    with freezegun.freeze_time('2011-07-28 11:03:00', tz_offset=0):
+        with request_population(3, tmpdir) as (rm, req):
+            rm.localtime = pytz.utc
+            req[0].execute()
+            req[1].starttime = datetime.datetime(
+                2011, 7, 28, 11, 1, tzinfo=pytz.utc)
+            req[1].save()
+            req[2].comment = 'reason'
+            req[2].save()
+            assert """\
 ({0}) scheduled: None, estimate: 1s, state: success
 
 ({1}) scheduled: 2011-07-28 11:01:00 UTC, estimate: 1s, state: due

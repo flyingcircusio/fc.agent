@@ -2,8 +2,8 @@ from __future__ import print_function
 from gocept.net.maintenance import Request
 
 import datetime
+import freezegun
 import gocept.net.utils
-import mock
 import os
 import pytest
 import pytz
@@ -84,24 +84,22 @@ def test_exitcode_should_read_last_line(tmpdir):
     assert request.exitcode == 2
 
 
-@mock.patch('gocept.net.utils.now')
-def test_state_pending(now, tmpdir):
-    now.return_value = datetime.datetime(2011, 7, 5, 8, 37, tzinfo=pytz.utc)
-    request = Request(
-        0, 1, path=str(tmpdir),
-        starttime=datetime.datetime(2011, 7, 5, 8, 38, tzinfo=pytz.utc))
-    request.save()
-    assert request.state == Request.PENDING
+def test_state_pending(tmpdir):
+    with freezegun.freeze_time('2011-07-05 08:37:00', tz_offset=0):
+        request = Request(
+            0, 1, path=str(tmpdir),
+            starttime=datetime.datetime(2011, 7, 5, 8, 38, tzinfo=pytz.utc))
+        request.save()
+        assert request.state == Request.PENDING
 
 
-@mock.patch('gocept.net.utils.now')
-def test_state_due(now, tmpdir):
-    now.return_value = datetime.datetime(2011, 7, 5, 8, 37, tzinfo=pytz.utc)
-    request = Request(
-        0, 1, path=str(tmpdir),
-        starttime=datetime.datetime(2011, 7, 5, 8, 37, tzinfo=pytz.utc))
-    request.save()
-    assert request.state == Request.DUE
+def test_state_due(tmpdir):
+    with freezegun.freeze_time('2011-07-05 08:37:00', tz_offset=0):
+        request = Request(
+            0, 1, path=str(tmpdir),
+            starttime=datetime.datetime(2011, 7, 5, 8, 37, tzinfo=pytz.utc))
+        request.save()
+        assert request.state == Request.DUE
 
 
 def test_state_running(tmpdir):
@@ -160,28 +158,24 @@ def test_estimate_should_be_positive():
         Request(0, 0)
 
 
-@mock.patch('gocept.net.utils.now')
-def test_started(now, tmpdir):
-    now.return_value = datetime.datetime(
-        2011, 7, 26, 9, 25, tzinfo=pytz.utc)
-    request = Request(0, 1, path=str(tmpdir))
-    request.start()
-    with open(os.path.join(request.path, 'started'), 'w') as f:
-        print('2011-07-26T09:25:00+00:00\n', file=f)
-    assert request.started == datetime.datetime(
-        2011, 7, 26, 9, 25, tzinfo=pytz.utc)
+def test_started(tmpdir):
+    with freezegun.freeze_time('2011-07-26 09:25:00', tz_offset=0):
+        request = Request(0, 1, path=str(tmpdir))
+        request.start()
+        with open(os.path.join(request.path, 'started'), 'w') as f:
+            print('2011-07-26T09:25:00+00:00\n', file=f)
+        assert request.started == datetime.datetime(
+            2011, 7, 26, 9, 25, tzinfo=pytz.utc)
 
 
-@mock.patch('gocept.net.utils.now')
-def test_stopped(now, tmpdir):
-    now.return_value = datetime.datetime(
-        2011, 7, 26, 9, 26, tzinfo=pytz.utc)
-    request = Request(0, 1, path=str(tmpdir))
-    request.stop()
-    with open(os.path.join(request.path, 'stopped'), 'w') as f:
-        print('2011-07-26T09:26:00+00:00\n', file=f)
-    assert request.stopped == datetime.datetime(
-        2011, 7, 26, 9, 26, tzinfo=pytz.utc)
+def test_stopped(tmpdir):
+    with freezegun.freeze_time('2011-07-26 09:26:00', tz_offset=0):
+        request = Request(0, 1, path=str(tmpdir))
+        request.stop()
+        with open(os.path.join(request.path, 'stopped'), 'w') as f:
+            print('2011-07-26T09:26:00+00:00\n', file=f)
+        assert request.stopped == datetime.datetime(
+            2011, 7, 26, 9, 26, tzinfo=pytz.utc)
 
 
 def test_start_should_not_update_existing_startfile(tmpdir):
@@ -207,18 +201,16 @@ def test_execution_time_should_return_executiontime(tmpdir):
     assert request.executiontime == 5292
 
 
-@mock.patch('gocept.net.utils.now')
-def test_execute_should_just_record_time_if_no_script(now, tmpdir):
-    now.return_value = datetime.datetime(
-        2011, 7, 27, 7, 35, tzinfo=pytz.utc)
-    request = Request(0, 1, path=str(tmpdir))
-    request.save()
-    request.execute()
-    assert request.state == Request.SUCCESS
-    assert request.started == datetime.datetime(
-        2011, 7, 27, 7, 35, tzinfo=pytz.utc)
-    assert request.stopped == datetime.datetime(
-        2011, 7, 27, 7, 35, tzinfo=pytz.utc)
+def test_execute_should_just_record_time_if_no_script(tmpdir):
+    with freezegun.freeze_time('2011-07-27 07:35:00', tz_offset=0):
+        request = Request(0, 1, path=str(tmpdir))
+        request.save()
+        request.execute()
+        assert request.state == Request.SUCCESS
+        assert request.started == datetime.datetime(
+            2011, 7, 27, 7, 35, tzinfo=pytz.utc)
+        assert request.stopped == datetime.datetime(
+            2011, 7, 27, 7, 35, tzinfo=pytz.utc)
 
 
 def test_execute_should_write_exitcode(tmpdir):

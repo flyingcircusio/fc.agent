@@ -31,7 +31,7 @@ def require_lock(func):
 def require_directory(func):
     """Decorator that ensures a directory connection is present."""
     def with_directory_connection(self, *args, **kwargs):
-        if not self.directory:
+        if self.directory is None:
             self.directory = gocept.net.directory.Directory()
         return func(self, *args, **kwargs)
     return with_directory_connection
