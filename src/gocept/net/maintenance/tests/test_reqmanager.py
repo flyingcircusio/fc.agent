@@ -180,6 +180,25 @@ def test_execute_requests(tmpdir, now):
     assert req[2].state == Request.PENDING
 
 
+def test_postpone(tmpdir, dir_fac, now):
+    directory = dir_fac.return_value
+    directory.postpone_maintenance = mock.Mock()
+    now.return_value = datetime.datetime(
+        2011, 7, 27, 7, 12, tzinfo=pytz.utc)
+    with ReqManager(str(tmpdir)) as rm:
+        req = rm.add_request(300, script='exit 69')
+        req.starttime = now()
+        req.save()
+        assert req.state == Request.DUE
+        rm.execute_requests()
+        rm.postpone_requests()
+        req = rm.load_request(req.reqid)
+        assert req.state == Request.POSTPONE
+        assert req.starttime is None
+        directory.postpone_maintenance.assert_called_with({
+            req.uuid: {'postpone_by': 300}})
+
+
 def test_archive(tmpdir, dir_fac):
     directory = dir_fac.return_value
     directory.end_maintenance = mock.Mock()

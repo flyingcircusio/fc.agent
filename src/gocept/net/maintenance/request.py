@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import datetime
+import glob
 import gocept.net.utils
 import iso8601
 import json
@@ -15,6 +16,12 @@ import uuid as pyuuid
 LOG = logging.getLogger(__name__)
 
 
+class Exit(object):
+    success = 0
+    postpone = 69
+    tempfail = 75
+
+
 class Request(object):
     """Represents a single scheduled maintenance request.
 
@@ -22,24 +29,31 @@ class Request(object):
     Requests have different states depending on the progress of their
     execution.
 
-    PENDING requests either do not have a scheduled execution date or one in
-    the future.
+    PENDING requests either do not have a scheduled execution date or
+        one in the future.
     DUE requests are ready for execution.
     RUNNING requests are currently in execution.
     SUCCESS requests have been successfully executed.
-    TEMPFAIL requests have been executed, but need to be executed again on the
-    next invokation of the maintenance request runner.
+    TEMPFAIL requests have been executed, but need to be executed again
+        on the next invokation of the maintenance request runner.
     RETRYLIMIT request have returned TEMPFAIL too often.
     ERROR requests have been executed but failed.
     DELETED requests have been manually deleted.
 
-    Each Requests has an own directory (Request.path) that may contain the
-    following files:
+    Maintenance actions signal their success with an exit code:
+        0 - successfully executed
+        69 - postpone, retry later
+        75 - temporary failure, retry ASAP
+        * - hard failure, abort action
+
+    Each Requests has an own directory (Request.path) that may contain
+    the following files:
+
         data - JSON dump of request metadata. Modified by the scheduler.
         started - ISO timestamp when Request execution has been started.
         stopped - ISO timestamp when Request execution has been stopped.
-        exitcode - script return code. If empty or non-existent, successfull
-            script execution is assumed.
+        exitcode - script return code. If empty or non-existent,
+            successfull script execution is assumed.
         stdout - capture standard output of script execution
         stderr - capture standard error of script execution
         attempt - increasing run number
@@ -55,6 +69,7 @@ class Request(object):
     RETRYLIMIT = 'too many retries'
     ERROR = 'error'
     DELETED = 'deleted'
+    POSTPONE = 'postpone'
 
     @classmethod
     def deserialize(cls, stream):
@@ -73,7 +88,8 @@ class Request(object):
         `script` - command that is to be executed via sh
         `comment` - reason for downtime, used to inform users
         `starttime` - scheduled start time
-        `applicable` - script to test is the script is applicable
+        `applicable` - script or directory of scripts to test is the script
+            is applicable
         `path` - path name to request's base directory
         `uuid` - unique ID to identify request at gocept.directory
         """
@@ -127,7 +143,6 @@ class Request(object):
             os.mkdir(self.path)
         with open(os.path.join(self.path, 'data'), 'w') as f:
             self.serialize(f)
-            os.fsync(f)
 
     def start(self):
         """Mark Request execution as started."""
@@ -159,16 +174,25 @@ class Request(object):
     def is_applicable(self):
         """Test this activity's applicability."""
         if not self.applicable:
-            return True
+            return 0
         LOG.debug('(req %s) testing if activity is applicable' % self.uuid)
-        exitcode = self.spawn(self.applicable)
-        with open(os.path.join(self.path, 'applicable'), 'a') as f:
-            print(exitcode, file=f)
-        if exitcode != 0:
-            LOG.info('(req %s) not applicable, terminating activity',
-                     self.uuid)
-            return False
-        return True
+        if os.path.isdir(self.applicable):
+            for snippet in sorted(
+                    glob.glob(os.path.join(self.applicable, '*'))):
+                if not os.access(snippet, os.X_OK):
+                    continue
+                exitcode = self.spawn(snippet)
+                if exitcode != 0:
+                    LOG.info('(req %s) not applicable (snippet %s exit %s)',
+                             self.uuid, snippet, exitcode)
+                    return exitcode
+        else:
+            exitcode = self.spawn(self.applicable)
+            if exitcode != 0:
+                LOG.info('(req %s) not applicable (exit %s)', self.uuid,
+                         exitcode)
+                return exitcode
+        return 0
 
     def execute(self):
         """Run the script in a subshell.
@@ -180,15 +204,16 @@ class Request(object):
         LOG.info('(req %s) starting execution', self.uuid)
         self.start()
         self.incr_attempt()
-        if self.script and self.is_applicable():
+        applicable = self.is_applicable()
+        if self.script and applicable == 0:
             exitcode = self.spawn(self.script)
+            if exitcode != 0:
+                LOG.warning('(req %s) script exited with %i', self.uuid,
+                            exitcode)
         else:
-            exitcode = 0
+            exitcode = applicable
         with open(os.path.join(self.path, 'exitcode'), 'a') as f:
             print(exitcode, file=f)
-        if exitcode != 0:
-            LOG.warning('(req %s) script exited with %i', self.uuid,
-                        exitcode)
         self.stop()
 
     def update(self, starttime=None):
@@ -235,9 +260,11 @@ class Request(object):
         if self.started:
             if self.stopped:
                 exitcode = self.exitcode
-                if not exitcode:
+                if exitcode == Exit.success:
                     return self.SUCCESS
-                if exitcode == 75:
+                if exitcode == Exit.postpone:
+                    return self.POSTPONE
+                if exitcode == Exit.tempfail:
                     if self.attempt > self.MAX_TRIES:
                         return self.RETRYLIMIT
                     else:

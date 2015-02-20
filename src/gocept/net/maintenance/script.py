@@ -1,6 +1,3 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Console scripts for maintenance handling."""
 
 import gocept.net.maintenance
@@ -10,16 +7,32 @@ import optparse
 import sys
 
 
+def parse_estimate(estimate):
+    if estimate.endswith('s'):
+        return int(estimate[:-1])
+    elif estimate.endswith('m'):
+        return int(estimate[:-1]) * 60
+    elif estimate.endswith('h'):
+        return int(estimate[:-1]) * 60 * 60
+    else:
+        return int(estimate)
+
+
 def request():
     """Post a new maintenance request to spooldir."""
     o = optparse.OptionParser(
         usage=u'[OPTIONS] ESTIMATE',
         description=u'Post new scheduled maintenance request for ESTIMATE in '
-            u'spool directory. ESTIMATE may have the suffixes s, m, or h.',
+        u'spool directory. ESTIMATE may have the suffixes s, m, or h.',
         epilog=u"""\
 The activity may exit with status 75 (TEMPFAIL) to indicate that the execution
-of the maintenance script should be suspended. Scripts are not run more than
-10 times in total. Other exit codes except 0 indicate hard failure.
+of the maintenance script should be suspended. If the activity exits with
+status 69 (UNAVAILABLE), it will be postponed by its duration estimate and then
+tried again. Other exit codes except 0 indicate hard failure.
+
+Likewise, the applicable script(s) may return with status codes with the same
+meaning to signal that the machine is currently not ready to run the
+maintenance action.
         """)
     default_options(o)
     o.add_option('-c', '--comment', default='',
@@ -28,24 +41,15 @@ of the maintenance script should be suspended. Scripts are not run more than
                  help=u'execute SCRIPT during maintenance period')
     o.add_option('-i', '--stdin', default=False, action='store_true',
                  help=u'read SCRIPT from stdin (mutually exclusive with -s)')
-    o.add_option('-a', '--applicable', default='', metavar='SCRIPT',
+    o.add_option('-a', '--applicable', default='', metavar='SCRIPT/DIR',
                  help=u'decide if maintenance activity is still applicable '
-                      u'by running SCRIPT -- if it exits unsuccessfully, the '
-                      u'maintenance action is terminated')
+                      u'by running SCRIPT or all executable snippets in DIR')
     opts, args = o.parse_args()
     if len(args) != 1:
         o.error('need ESTIMATE (invoke with "--help" to get help)')
     if opts.script and opts.stdin:
         o.error('--script and --stdin are mutually exclusive')
-    estimate = args[0]
-    if estimate.endswith('s'):
-        estimate = int(estimate[:-1])
-    elif estimate.endswith('m'):
-        estimate = int(estimate[:-1]) * 60
-    elif estimate.endswith('h'):
-        estimate = int(estimate[:-1]) * 60 * 60
-    else:
-        estimate = int(estimate)
+    estimate = parse_estimate(args[0])
     if not estimate > 0:
         o.error('estimate must be positive')
     setup_logging(opts.verbose)
@@ -89,6 +93,7 @@ and executed if due. Finished requests are archived.""")
     with gocept.net.maintenance.ReqManager(opts.spooldir) as rm:
         rm.execute_requests()
         with gocept.net.directory.exceptions_screened():
+            rm.postpone_requests()
             rm.archive_requests()
 
 

@@ -213,6 +213,27 @@ class ReqManager(object):
 
     @require_lock
     @require_directory
+    def postpone_requests(self):
+        """Instructs directory to postpone requests.
+
+        Postponed requests get their new scheduled time with the next
+        schedule call.
+        """
+        requests = []
+        for req in self.requests().values():
+            if req.state is gocept.net.maintenance.Request.POSTPONE:
+                requests.append(req)
+        if not requests:
+            return
+        postpone = dict((req.uuid, {'postpone_by': req.estimate})
+                        for req in requests)
+        LOG.debug('invoking postpone_maintenance(%r)', postpone)
+        self.directory.postpone_maintenance(postpone)
+        for req in requests:
+            req.update(starttime=None)
+
+    @require_lock
+    @require_directory
     def archive_requests(self):
         """Move all completed requests to archivedir."""
         archive = {}

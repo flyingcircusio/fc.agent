@@ -126,6 +126,13 @@ def test_state_tempfail(tmpdir):
     assert request.state == Request.TEMPFAIL
 
 
+def test_state_postpone(tmpdir):
+    request = Request(0, 1, script='exit 69', path=str(tmpdir))
+    request.save()
+    request.execute()
+    assert request.state == Request.POSTPONE
+
+
 def test_state_retrylimit(tmpdir):
     request = Request(0, 1, script='exit 75', path=str(tmpdir))
     request.save()
@@ -221,12 +228,56 @@ def test_execute_should_write_exitcode(tmpdir):
         assert f.read() == '70\n'
 
 
-def test_execute_should_write_applicable(tmpdir):
-    request = Request(0, 1, script='true', applicable='exit 3',
+def test_applicable_error(tmpdir):
+    request = Request(0, 1, script='true', applicable='exit 1',
                       path=str(tmpdir))
+    request.save()
     request.execute()
-    with open(os.path.join(request.path, 'applicable')) as f:
-        assert f.read() == '3\n'
+    assert request.state == Request.ERROR
+    assert request.exitcode == 1
+
+
+def test_applicable_postpone(tmpdir):
+    request = Request(0, 1, script='true', applicable='exit 69',
+                      path=str(tmpdir))
+    request.save()
+    request.execute()
+    assert request.state == Request.POSTPONE
+
+
+def generate_applicable_snippets(tmp, *exitcodes):
+    appdir = tmp / 'applicable'
+    os.mkdir(str(appdir))
+    for i, exitcode in enumerate(exitcodes):
+        with open(str(appdir / str(i)), 'w') as f:
+            f.write('exit {}\n'.format(exitcode))
+            os.fchmod(f.fileno(), 0o755)
+    return appdir
+
+
+def test_applicable_directory(tmpdir):
+    appdir = generate_applicable_snippets(tmpdir, 0, 69)
+    request = Request(0, 1, script='true', applicable=str(appdir),
+                      path=str(tmpdir))
+    request.save()
+    assert 69 == request.is_applicable()
+
+
+def test_applicable_dir_first_nonzero_script_wins(tmpdir):
+    appdir = generate_applicable_snippets(tmpdir, 1, 75, 69)
+    request = Request(0, 1, script='true', applicable=str(appdir),
+                      path=str(tmpdir))
+    request.save()
+    assert 1 == request.is_applicable()
+
+
+def test_applicable_dir_should_skip_nonexecutable_files(tmpdir):
+    appdir = generate_applicable_snippets(tmpdir, 1, 0)
+    os.chmod(str(appdir / '0'), 0o644)
+    request = Request(0, 1, script='true', applicable=str(appdir),
+                      path=str(tmpdir))
+    request.save()
+    assert 0 == request.is_applicable()
 
 
 def test_execute_should_cd_to_requestpath(tmpdir):
