@@ -70,7 +70,7 @@ class ReqManager(object):
             except AttributeError:
                 starttime = req.starttime
             print('({0}) scheduled: {1}, estimate: {2}, state: {3}'.format(
-                req.uuid, starttime, req.estimate_readable, req.state),
+                req.uuid[0:8], starttime, req.estimate_readable, req.state),
                 file=out)
             if req.comment:
                 print(req.comment, file=out)

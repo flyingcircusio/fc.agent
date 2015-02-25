@@ -245,4 +245,4 @@ def test_str(tmpdir, tz_utc):
 ({2}) scheduled: None, estimate: 1s, state: pending
 reason
 
-""".format(req[0].uuid, req[1].uuid, req[2].uuid) == str(rm)
+""".format(req[0].uuid[0:8], req[1].uuid[0:8], req[2].uuid[0:8]) == str(rm)
