@@ -230,6 +230,7 @@ class ReqManager(object):
         LOG.debug('invoking postpone_maintenance(%r)', postpone)
         self.directory.postpone_maintenance(postpone)
         for req in requests:
+            req.reset_started_stopped()
             req.update(starttime=None)
 
     @require_lock

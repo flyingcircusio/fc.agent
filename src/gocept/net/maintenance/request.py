@@ -301,6 +301,13 @@ class Request(object):
         except EnvironmentError:
             pass
 
+    def reset_started_stopped(self):
+        try:
+            os.unlink(os.path.join(self.path, 'started'))
+            os.unlink(os.path.join(self.path, 'stopped'))
+        except OSError:
+            pass
+
     @property
     def executiontime(self):
         """Return execution time (s) if started and stopped files exist."""

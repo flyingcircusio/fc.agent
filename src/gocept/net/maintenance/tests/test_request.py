@@ -5,6 +5,7 @@ import datetime
 import freezegun
 import gocept.net.utils
 import os
+import os.path as p
 import pytest
 import pytz
 import shutil
@@ -185,6 +186,17 @@ def test_start_should_not_update_existing_startfile(tmpdir):
     req.execute()
     with open(os.path.join(req.path, 'started')) as f:
         assert u'old\n' == f.read()
+
+
+def test_reset_started_stopped(tmpdir):
+    request = Request(0, 1, path=str(tmpdir))
+    request.start()
+    assert p.exists(p.join(request.path, 'started')) is True
+    request.stop()
+    assert p.exists(p.join(request.path, 'stopped')) is True
+    request.reset_started_stopped()
+    assert p.exists(p.join(request.path, 'started')) is False
+    assert p.exists(p.join(request.path, 'stopped')) is False
 
 
 def test_execution_time_should_return_none_if_not_run(tmpdir):

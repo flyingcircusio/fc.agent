@@ -204,7 +204,7 @@ def test_postpone(tmpdir, dir_fac):
             rm.execute_requests()
             rm.postpone_requests()
             req = rm.load_request(req.reqid)
-            assert req.state == Request.POSTPONE
+            assert req.state == Request.PENDING
             assert req.starttime is None
             directory.postpone_maintenance.assert_called_with({
                 req.uuid: {'postpone_by': 300}})
