@@ -4,7 +4,7 @@ Changelog
 1.6.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Improve node deletion: delete bacula config snippets, too.
 
 
 1.6.2 (2015-03-02)
