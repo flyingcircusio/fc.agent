@@ -4,7 +4,7 @@ Changelog
 1.6.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Improve node deletion: delete snapshots of VM images, too. (#14894)
 
 
 1.6.3 (2015-03-05)

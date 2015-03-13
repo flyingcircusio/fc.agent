@@ -41,6 +41,8 @@ class CephConfigurationTest(unittest.TestCase):
             name = 'node0{}'.format(node)
             images['{}.root'.format(name)] = RBDImage(
                 '{}.root'.format(name), 100)
+            images['{}.root@snap1'.format(name)] = RBDImage(
+                '{}.root'.format(name), 100, snapshot='snap1')
             images['{}.swap'.format(name)] = RBDImage(
                 '{}.swap'.format(name), 100)
             images['{}.tmp'.format(name)] = RBDImage(
@@ -51,6 +53,8 @@ class CephConfigurationTest(unittest.TestCase):
         gocept.net.configure.ceph.purge_volumes()
 
         assert self.fake_call.call_args_list == [
+            call(['rbd', '--id', 'admin', '-c', '/etc/ceph/ceph.conf'],
+                 ['snap', 'rm', 'node/node04.root@snap1'], False, False),
             call(['rbd', '--id', 'admin', '-c', '/etc/ceph/ceph.conf'],
                  ['rm', 'node/node04.root'], False, False),
             call(['rbd', '--id', 'admin', '-c', '/etc/ceph/ceph.conf'],

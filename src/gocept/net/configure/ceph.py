@@ -138,14 +138,20 @@ class VolumeDeletions(object):
             if 'purge' in node['stages']:
                 for image in ['{}.root', '{}.swap', '{}.tmp']:
                     image = image.format(name)
-                    try:
-                        rbd_image = pool[image]
-                    except KeyError:
-                        # Already deleted
-                        pass
-                    else:
-                        print("Purging volume {}".format(image))
-                        pool.image_rm(rbd_image)
+                    base_image = None
+                    for rbd_image in pool.images:
+                        if rbd_image.image != image:
+                            continue
+                        if not rbd_image.snapshot:
+                            base_image = rbd_image
+                            continue
+                        # This is a snapshot of the volume itself.
+                        print("Purging snapshot {}".format(image))
+                        pool.snap_rm(rbd_image)
+                    if base_image is None:
+                        continue
+                    print("Purging volume {}".format(image))
+                    pool.image_rm(base_image)
 
 
 def purge_volumes():
