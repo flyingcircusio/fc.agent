@@ -61,3 +61,17 @@ class CephConfigurationTest(unittest.TestCase):
                  ['rm', 'node/node04.swap'], False, False),
             call(['rbd', '--id', 'admin', '-c', '/etc/ceph/ceph.conf'],
                  ['rm', 'node/node04.tmp'], False, False)]
+
+    def test_node_deletion_missing_pool(self):
+        self.fake_directory().deletions.return_value = {
+            'node00': {'stages': []},
+            'node01': {'stages': ['prepare']},
+            'node02': {'stages': ['prepare', 'soft']},
+            'node03': {'stages': ['prepare', 'soft', 'hard']},
+            'node04': {'stages': ['prepare', 'soft', 'hard', 'purge']}}
+        import sys
+        sys.argv = ['']
+
+        self.fake_load_pool.side_effect = KeyError()
+
+        gocept.net.configure.ceph.purge_volumes()

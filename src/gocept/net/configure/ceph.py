@@ -135,11 +135,16 @@ class VolumeDeletions(object):
             # This really depends on the VM names adhering to our policy of
             # <rg>[0-9]{2}
             pool = self.pools[name[:-2]]
+            try:
+                images = list(pool.images)
+            except KeyError:
+                # The pool doesn't exist. Ignore. Nothing to delete anyway.
+                continue
             if 'purge' in node['stages']:
                 for image in ['{}.root', '{}.swap', '{}.tmp']:
                     image = image.format(name)
                     base_image = None
-                    for rbd_image in pool.images:
+                    for rbd_image in images:
                         if rbd_image.image != image:
                             continue
                         if not rbd_image.snapshot:
