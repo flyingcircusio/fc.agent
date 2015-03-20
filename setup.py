@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 setup(
     name='fc.agent',
     version='1.6.5.dev0',
-    author='gocept',
-    author_email='mail@gocept.com',
-    url='http://bitbucket.org/flyingcircus/fc.agent/',
+    author='Flying Circus',
+    author_email='mail@flyingcircus.io',
+    url='http://bitbucket.org/flyingcircus/fc.agent',
     description="""\
 Local configuration utilities and helper APIs for flyingcircus.io
 system configuration.
