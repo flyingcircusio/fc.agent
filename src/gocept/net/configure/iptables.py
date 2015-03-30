@@ -54,7 +54,7 @@ class Iptables(object):
 
     def reload_iptables(self):
         """Trigger reload of changed iptables rules."""
-        subprocess.check_call(['update-iptables'])
+        subprocess.check_call(['/usr/local/sbin/update-iptables'])
 
     def puppet_catalog_run(self):
         try:
