@@ -146,41 +146,11 @@ class NagiosContacts(object):
         self._flush('/etc/nagios/globals/contacts.cfg', result.getvalue())
 
     def contacts_technical(self):
-        """List all technical contacts as Nagios contacts."""
-        result = StringIO.StringIO()
-
-        contacts = dict()
-        for group in self.directory.list_resource_groups():
-            # XXX directory load. a comprehensive API would be nice.
-            group_details = self.directory.lookup_resourcegroup(group)
-            technical_contacts = group_details.get('technical_contacts', [])
-            for contact in technical_contacts:
-                contacts.setdefault(contact, []).append(group)
-
-        for contact, groups in contacts.items():
-            groups = set(groups)
-            groups.difference_update(self.contacts_seen.get(contact, set()))
-            if not groups:
-                continue
-            groups = list(groups)
-            groups.sort()
-            contact_hash = hashlib.sha256(contact)
-            contact_hash = contact_hash.hexdigest()[:5]
-
-            contact_safe = re.sub(r'[^a-zA-Z0-9]', '_', contact)
-            contact_name = "technical_contact_{}_{}".format(
-                contact_safe, contact_hash)
-
-            additional_options = '    contact_groups      ' + ','.join(groups)
-            result.write(CONTACT_TEMPLATE.format(
-                name=contact_name,
-                alias='Technical contact {} ({})'.format(
-                    contact_safe, contact_hash),
-                mail=contact,
-                additional_options=additional_options))
-
-        self._flush('/etc/nagios/globals/technical_contacts.cfg',
-                    result.getvalue())
+        """Do not explicitly alert technical contacts for now, see also #14900"""
+        contacts_config = '/etc/nagios/globals/technical_contacts.cfg'
+	if not os.path.exists(contacts_config):
+	    return
+        os.remove(contacts_config)
 
 
 def contacts():
