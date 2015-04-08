@@ -82,6 +82,13 @@ class NagiosContacts(object):
         f.close()
         self.needs_restart = True
 
+    def _purge(self, filename):
+        filename = self.prefix + filename
+	if not os.path.exists(filename):
+	    return
+        os.remove(filename)
+        self.needs_restart = True
+
     def contact_groups(self):
         self._init_ldap()
         result = StringIO.StringIO()
@@ -147,10 +154,7 @@ class NagiosContacts(object):
 
     def contacts_technical(self):
         """Do not explicitly alert technical contacts for now, see also #14900"""
-        contacts_config = '/etc/nagios/globals/technical_contacts.cfg'
-	if not os.path.exists(contacts_config):
-	    return
-        os.remove(contacts_config)
+        self._purge('/etc/nagios/globals/technical_contacts.cfg')
 
 
 def contacts():

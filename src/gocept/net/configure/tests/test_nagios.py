@@ -11,44 +11,15 @@ def empty_config(tmpdir):
     return tmpdir
 
 
-def test_create_technical_contacts(empty_config, tmpdir, capsys, directory):
-    directory = directory()
-    directory.list_resource_groups.return_value = ['foobar']
-    directory.lookup_resourcegroup.return_value = {
-        'technical_contacts': ['foo@example.com']}
+def test_delete_technical_contacts(empty_config, tmpdir, directory):
+    target = str(tmpdir / '/etc/nagios/globals/technical_contacts.cfg')
+    with open(target, 'a'):
+        os.utime(target, (1, 1))
 
     contacts = NagiosContacts()
     contacts.prefix = str(tmpdir)
     contacts.contacts_technical()
-
-    target = str(tmpdir / '/etc/nagios/globals/technical_contacts.cfg')
-    found = open(target, 'r').read()
-    assert found == '''\
-
-define contact {
-    use                 generic-contact
-    contact_name        technical_contact_foo_example_com_321ba
-    alias               Technical contact foo_example_com (321ba)
-    email               foo@example.com
-    contact_groups      foobar
-}
-'''
-
-
-def test_ignore_duplicate_contacts(empty_config, tmpdir, capsys, directory):
-    directory = directory()
-    directory.list_resource_groups.return_value = ['foobar']
-    directory.lookup_resourcegroup.return_value = {
-        'technical_contacts': ['foo@example.com']}
-
-    contacts = NagiosContacts()
-    contacts.prefix = str(tmpdir)
-    contacts.contacts_seen['foo@example.com'] = set(['foobar'])
-    contacts.contacts_technical()
-
-    target = str(tmpdir / '/etc/nagios/globals/technical_contacts.cfg')
-    found = open(target, 'r').read()
-    assert found == ''
+    assert not os.path.exists(target)
 
 
 def test_create_contacts(empty_config, tmpdir, capsys, monkeypatch, directory):
