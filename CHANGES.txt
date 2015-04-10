@@ -5,6 +5,7 @@ Changelog
 ------------------
 
 - Remove explicit nagios notification for technical contacts. (#14900)
+- Fix spurious bug in update-iptables invocation.
 
 
 1.6.5 (2015-03-20)
