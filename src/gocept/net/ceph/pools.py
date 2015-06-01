@@ -147,7 +147,7 @@ class Pool(object):
                 accept_failure=True)
             if returncode == 0:
                 break
-            elif returncode == 11:  # EGAIN
+            elif returncode == 11:  # EAGAIN
                 retry += 1
                 continue
             raise RuntimeError('failed to set pgp_num for {} to {}'.format(
@@ -169,3 +169,10 @@ class Pool(object):
         assert rbdimage.snapshot is None
         self.cluster.rbd(['rm', '{}/{}'.format(self.name, rbdimage.image)])
         self._images = None
+
+    def delete(self):
+        if self.images:
+            raise RuntimeError('cannot delete non-empty pool {} -- remove '
+                               'images first'.format(self.name))
+        self.cluster.ceph_osd(['pool', 'delete', self.name, self.name,
+                               '--yes-i-really-really-mean-it'])

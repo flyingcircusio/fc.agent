@@ -35,7 +35,8 @@ class ResourcegroupPoolEquivalence(object):
             print('creating pool {}'.format(pool))
             self.pools.create(pool)
         for pool in act - exp:
-            print('should be deleting pool {} (disabled)'.format(pool))
+            print('deleting pool {}'.format(pool))
+            self.pools[pool].delete()
 
 
 def pools():
