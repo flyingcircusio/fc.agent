@@ -5,7 +5,8 @@ Changelog
 ------------------
 
 - Delete non-existent Ceph pools if they contain no images (#14997).
-
+- Remove now outdated Qemu/KVM management code as this has all moved
+  to fc.qemu.
 
 1.6.6 (2015-04-10)
 ------------------
