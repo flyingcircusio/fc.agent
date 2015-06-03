@@ -40,6 +40,7 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
             'here', 'example.com')
         master.autosign_conf = self.autosign_conf
         master.autosign()
+        assert master.nodes == ['vm01.example.com', 'vm02.example.com']
         self.assertMultiLineEqual('vm01.example.com\nvm02.example.com\n',
                                   open(self.autosign_conf).read())
 
