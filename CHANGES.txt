@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.6.8 (unreleased)
+1.6.8 (2015-06-03)
 ------------------
 
 - Implement late autosigning when VMs are brought up with race conditions.
