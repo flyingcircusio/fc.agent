@@ -3,6 +3,7 @@ from gocept.net.utils import log_call
 import gocept.net.configfile
 import gocept.net.directory
 import json
+import json
 import logging
 import os
 
@@ -20,15 +21,16 @@ class Puppetmaster(object):
         self.location = location
         self.directory = gocept.net.directory.Directory()
         self.suffix = suffix
+        self.nodes = []
 
     def autosign(self):
         with gocept.net.directory.exceptions_screened():
-            nodes = ['{0}.{1}\n'.format(node['name'], self.suffix)
-                     for node in self.directory.list_nodes()
-                     if node['parameters']['location'] == self.location]
-        nodes.sort()
+            self.nodes = ['{0}.{1}\n'.format(node['name'], self.suffix)
+                          for node in self.directory.list_nodes()
+                          if node['parameters']['location'] == self.location]
+        self.nodes.sort()
         conffile = gocept.net.configfile.ConfigFile(self.autosign_conf)
-        conffile.write(''.join(nodes))
+        conffile.write(''.join(self.nodes))
         conffile.commit()
 
     def delete_nodes(self):
@@ -54,9 +56,23 @@ class Puppetmaster(object):
                     print 'Cleaning {}'.format(name)
                     log_call(['puppet', 'node', 'clean', name])
 
+    def sign_race_conditions(self):
+        # Those VMs were to fast and didn't appear in autosign when we needed
+        # them. Sign them manually anyway.
+        c = log_call(['puppet', 'ca', 'list', '--pending', '--render-as',
+                     'json'])
+        requests = json.loads(c)
+        for request in requests:
+                if request['state'] != 'requested':
+                    continue
+                if request['name'] not in self.nodes:
+                    continue
+                log_call(['puppet', 'ca', 'sign', request['name']])
+
 
 def main():
     """.conf generator main script."""
     master = Puppetmaster(os.environ['PUPPET_LOCATION'], os.environ['SUFFIX'])
     master.autosign()
     master.delete_nodes()
+    master.sign_race_conditions()

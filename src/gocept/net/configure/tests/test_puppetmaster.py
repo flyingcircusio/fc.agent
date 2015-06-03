@@ -43,6 +43,27 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
         self.assertMultiLineEqual('vm01.example.com\nvm02.example.com\n',
                                   open(self.autosign_conf).read())
 
+    def test_autosign_race_condition_unknown_not_signed(self):
+        master = gocept.net.configure.puppetmaster.Puppetmaster(
+            'here', 'example.com')
+        master.nodes = []
+        self.fake_call.return_value = """\
+[{"name":"test06.gocept.net","state":"requested"}]"""
+        master.sign_race_conditions()
+        assert self.fake_call.call_args_list == [
+            call(['puppet', 'ca', 'list', '--pending', '--render-as', 'json'])]
+
+    def test_autosign_race_condition_known_gets_signed(self):
+        master = gocept.net.configure.puppetmaster.Puppetmaster(
+            'here', 'example.com')
+        master.nodes = ['test06.gocept.net']
+        self.fake_call.return_value = """\
+[{"name":"test06.gocept.net","state":"requested"}]"""
+        master.sign_race_conditions()
+        assert self.fake_call.call_args_list == [
+            call(['puppet', 'ca', 'list', '--pending', '--render-as', 'json']),
+            call(['puppet', 'ca', 'sign', u'test06.gocept.net'])]
+
     def test_node_deletion(self):
         self.fake_directory().deletions.return_value = {
             'node00': {'stages': []},
