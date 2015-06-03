@@ -25,12 +25,12 @@ class Puppetmaster(object):
 
     def autosign(self):
         with gocept.net.directory.exceptions_screened():
-            self.nodes = ['{0}.{1}\n'.format(node['name'], self.suffix)
+            self.nodes = ['{0}.{1}'.format(node['name'], self.suffix)
                           for node in self.directory.list_nodes()
                           if node['parameters']['location'] == self.location]
         self.nodes.sort()
         conffile = gocept.net.configfile.ConfigFile(self.autosign_conf)
-        conffile.write(''.join(self.nodes))
+        conffile.write('\n'.join(self.nodes))
         conffile.commit()
 
     def delete_nodes(self):
