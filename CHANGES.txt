@@ -4,7 +4,7 @@ Changelog
 1.6.9 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Automatic Kibana configuration (#16002).
 
 
 1.6.8 (2015-06-03)
