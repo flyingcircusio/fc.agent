@@ -31,6 +31,7 @@ class Puppetmaster(object):
         self.nodes.sort()
         conffile = gocept.net.configfile.ConfigFile(self.autosign_conf)
         conffile.write('\n'.join(self.nodes))
+        conffile.write('\n')
         conffile.commit()
 
     def delete_nodes(self):
