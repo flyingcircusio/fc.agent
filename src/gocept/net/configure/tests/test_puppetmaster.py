@@ -41,7 +41,7 @@ class PuppetmasterConfigurationTest(unittest.TestCase):
         master.autosign_conf = self.autosign_conf
         master.autosign()
         assert master.nodes == ['vm01.example.com', 'vm02.example.com']
-        self.assertMultiLineEqual('vm01.example.com\nvm02.example.com\n',
+        self.assertMultiLineEqual('vm01.example.com\nvm02.example.com',
                                   open(self.autosign_conf).read())
 
     def test_autosign_race_condition_unknown_not_signed(self):
