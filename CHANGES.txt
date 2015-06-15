@@ -4,7 +4,9 @@ Changelog
 1.6.9 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Protect against users re-registering local Unix usernames (like root, apache,
+  or others) without us noticing. Currently you could still register them but
+  things would break on your   machines anyway.
 
 
 1.6.8 (2015-06-03)

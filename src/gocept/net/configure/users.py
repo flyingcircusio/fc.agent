@@ -92,7 +92,15 @@ class UserConfig(object):
         # Step 1: Home directory creation
 
         # Update passwd and shadow records
+        import pdb; pdb.set_trace()
         user_pwd = self.etcpasswd.get(user['uid'], create=True)
+        if not hasattr(user_pwd, 'uid'):
+            # Initial creation: set ID
+            user_pwd.uid = str(user['id'])
+        elif user_pwd.uid != str(user['id']):
+            raise ValueError(
+                'Local numeric UID conflict for {}: {} != {}'.format(
+                    user['uid'], user['id'], user_pwd.uid))
         user_pwd.uid = str(user['id'])
         user_pwd.gid = str(user['gid'])
         user_pwd.gecos = user['name'].encode('utf-8')
@@ -113,7 +121,7 @@ class UserConfig(object):
         for root, dirs, files in os.walk(homedir, followlinks=False):
             os.chown(root, user['id'], user['gid'])
             for file in files:
-                os.chown(os.path.join(root, file),  user['id'], user['gid'])
+                os.chown(os.path.join(root, file), user['id'], user['gid'])
 
     def ensure_ssh(self, user):
         ssh = self._map(os.path.join(user['home_directory'], '.ssh'))

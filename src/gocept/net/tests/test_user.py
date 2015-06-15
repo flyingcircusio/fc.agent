@@ -3,6 +3,7 @@ import datetime
 import gocept.net.configure.users
 import mock
 import os
+import pytest
 import pytz
 import shutil
 import tempfile
@@ -57,13 +58,13 @@ class TestUserConfig(unittest.TestCase):
         self.chown = self.p_chown.start()
 
         self.tmpdir = tempfile.mkdtemp()
-        os.mkdir(self.tmpdir+'/etc')
-        os.mkdir(self.tmpdir+'/etc/skel')
-        open(self.tmpdir+'/etc/skel/foo', 'w').write('foobar')
-        os.mkdir(self.tmpdir+'/home')
-        open(self.tmpdir+'/etc/group', 'w')
-        open(self.tmpdir+'/etc/shadow', 'w')
-        open(self.tmpdir+'/etc/passwd', 'w')
+        os.mkdir(self.tmpdir + '/etc')
+        os.mkdir(self.tmpdir + '/etc/skel')
+        open(self.tmpdir + '/etc/skel/foo', 'w').write('foobar')
+        os.mkdir(self.tmpdir + '/home')
+        open(self.tmpdir + '/etc/group', 'w')
+        open(self.tmpdir + '/etc/shadow', 'w')
+        open(self.tmpdir + '/etc/passwd', 'w')
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -90,19 +91,19 @@ class TestUserConfig(unittest.TestCase):
         configuration.ensure_users()
         configuration.finish()
 
-        group = open(self.tmpdir+'/etc/group', 'r').read()
+        group = open(self.tmpdir + '/etc/group', 'r').read()
         self.assertEqual(group, """\
 login:x:3:bob
 admins:x:1:
 test:x:2:
 """)
 
-        passwd = open(self.tmpdir+'/etc/passwd', 'r').read()
+        passwd = open(self.tmpdir + '/etc/passwd', 'r').read()
         self.assertEqual(passwd, """\
 bob:x:10:100:Bob the builder:/home/bob:/bin/bash
 """)
 
-        shadow = open(self.tmpdir+'/etc/shadow', 'r').read()
+        shadow = open(self.tmpdir + '/etc/shadow', 'r').read()
         self.assertEqual(shadow, """\
 bob:$6$fdas$gt798ewa:16161:0:99999:7:::
 """)
@@ -123,8 +124,32 @@ bob:$6$fdas$gt798ewa:16161:0:99999:7:::
         configuration.ensure_users()
         configuration.finish()
 
-        group = open(self.tmpdir+'/etc/group', 'r').read()
+        group = open(self.tmpdir + '/etc/group', 'r').read()
         self.assertEqual(group, """\
 login:x:3:tom
 admins:x:1:tom
 """)
+
+    @mock.patch('gocept.net.utils.now')
+    def test_local_users_with_different_uid_not_hijackable(self, _now):
+        # fix notion of time to get stable "lastchange" value in shadow
+        _now.return_value = datetime.datetime(2014, 4, 1, tzinfo=pytz.utc)
+
+        with open(self.tmpdir + '/etc/passwd', 'w') as f:
+            f.write('root:x:0:0:The Root User:/root:/bin/bash')
+
+        self.fake_directory().list_permissions.return_value = [
+            {'name': 'login', 'id': 3}]
+        self.fake_directory().list_users.return_value = [
+            {'uid': 'root', 'id': 10, 'gid': 100, 'name': 'Bob the builder',
+             'login_shell': '/bin/bash', 'home_directory': '/home/bob',
+             'password': '{crypt}$6$fdas$gt798ewa',
+             'ssh_pubkey': ['ssh-rsa fdhsaukhfdsa foo@localhost'],
+             'permissions': {'test': ['login']}}]
+
+        configuration = gocept.net.configure.users.UserConfig(
+            'test', prefix=self.tmpdir)
+        configuration.ensure_permission_groups()
+        configuration.ensure_rg_unix_group()
+        with pytest.raises(ValueError):
+            configuration.ensure_users()
