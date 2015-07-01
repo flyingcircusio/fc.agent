@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.0 (unreleased)
+1.7.0 (2015-07-01)
 ------------------
 
 - Automatic Kibana configuration (#16002).
