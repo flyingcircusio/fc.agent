@@ -13,3 +13,4 @@ local
 *.sw[po]
 tags
 *.sublime*
+pip-selfcheck.json

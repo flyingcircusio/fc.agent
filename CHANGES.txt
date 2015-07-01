@@ -1,10 +1,11 @@
 Changelog
 =========
 
-1.6.9 (unreleased)
+1.7.0 (unreleased)
 ------------------
 
 - Automatic Kibana configuration (#16002).
+- Parallelize localconfig-kvm-init (#14920).
 
 
 1.6.8 (2015-06-03)
