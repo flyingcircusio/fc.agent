@@ -88,8 +88,7 @@ class Request(object):
         `script` - command that is to be executed via sh
         `comment` - reason for downtime, used to inform users
         `starttime` - scheduled start time
-        `applicable` - script or directory of scripts to test is the script
-            is applicable
+        `applicable` - script to test if the maintenance is still applicable
         `path` - path name to request's base directory
         `uuid` - unique ID to identify request at gocept.directory
         """
@@ -168,7 +167,7 @@ class Request(object):
             f_stdout.write(stdout)
         with open(os.path.join(self.path, 'stderr'), 'a') as f_stderr:
             f_stderr.write(stderr)
-            LOG.debug('(req %s) returncode: %s' % (self.uuid, p.returncode))
+        LOG.debug('(req %s) returncode: %s' % (self.uuid, p.returncode))
         return p.returncode
 
     def is_applicable(self):
@@ -177,15 +176,9 @@ class Request(object):
             return 0
         LOG.debug('(req %s) testing if activity is applicable' % self.uuid)
         if os.path.isdir(self.applicable):
-            for snippet in sorted(
-                    glob.glob(os.path.join(self.applicable, '*'))):
-                if not os.access(snippet, os.X_OK):
-                    continue
-                exitcode = self.spawn(snippet)
-                if exitcode != 0:
-                    LOG.info('(req %s) not applicable (snippet %s exit %s)',
-                             self.uuid, snippet, exitcode)
-                    return exitcode
+            # We used to support snippet directories here, but those were
+            # moved to the global prepare/finish feature.
+            return
         else:
             exitcode = self.spawn(self.applicable)
             if exitcode != 0:

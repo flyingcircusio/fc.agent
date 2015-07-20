@@ -1,10 +1,12 @@
 from __future__ import print_function
 from gocept.net.maintenance import ReqManager, Request
+from gocept.net.maintenance.reqmanager import run_snippets
 from gocept.net.utils import now
 
 import contextlib
 import datetime
 import freezegun
+import gocept.net.maintenance.reqmanager
 import mock
 import os
 import pytest
@@ -46,20 +48,24 @@ def request_population(n, dir):
     The ReqManager and a list of Requests are passed to the calling code.
     """
     with ReqManager(str(dir)) as reqmanager:
+        reqmanager.PREPARE_SCRIPTS = str(dir / 'scripts/prepare')
+        os.makedirs(reqmanager.PREPARE_SCRIPTS)
+        reqmanager.FINISH_SCRIPTS = str(dir / 'scripts/finish')
+        os.makedirs(reqmanager.FINISH_SCRIPTS)
         requests = []
         for i in range(n):
             req = reqmanager.add_request(
-                1, 'exit 0', uuid=pyuuid.UUID('{:032d}'.format(i + 2**32)))
+                1, 'exit 0', uuid=pyuuid.UUID('{:032d}'.format(i + 2 ** 32)))
             requests.append(req)
         yield (reqmanager, requests)
 
 
 def test_init_should_create_directories(tmpdir):
-    spooldir = str(tmpdir/'maintenance')
+    spooldir = str(tmpdir / 'maintenance')
     ReqManager(spooldir)
     assert os.path.isdir(spooldir)
-    assert os.path.isdir(spooldir+'/requests')
-    assert os.path.isdir(spooldir+'/archive')
+    assert os.path.isdir(spooldir + '/requests')
+    assert os.path.isdir(spooldir + '/archive')
 
 
 def test_should_open_lockfile(tmpdir):
@@ -77,7 +83,7 @@ def test_add_request_should_set_path(tmpdir):
 
 
 def test_add_should_init_seq_to_allocate_ids(tmpdir, request_cls):
-    seqfile = str(tmpdir/'.SEQ')
+    seqfile = str(tmpdir / '.SEQ')
     request = request_cls.return_value
     request.reqid = None
     with ReqManager(str(tmpdir)) as rm:
@@ -88,7 +94,7 @@ def test_add_should_init_seq_to_allocate_ids(tmpdir, request_cls):
 
 
 def test_add_should_increment_seq(tmpdir, request_cls):
-    seqfile = str(tmpdir/'.SEQ')
+    seqfile = str(tmpdir / '.SEQ')
     with open(seqfile, 'w') as f:
         print(7, file=f)
     request = request_cls.return_value
@@ -197,6 +203,10 @@ def test_postpone(tmpdir, dir_fac):
     directory.postpone_maintenance = mock.Mock()
     with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
         with ReqManager(str(tmpdir)) as rm:
+            rm.PREPARE_SCRIPTS = str(tmpdir / 'scripts/prepare')
+            os.makedirs(rm.PREPARE_SCRIPTS)
+            rm.FINISH_SCRIPTS = str(tmpdir / 'scripts/finish')
+            os.makedirs(rm.FINISH_SCRIPTS)
             req = rm.add_request(300, script='exit 69')
             req.starttime = now()
             req.save()
@@ -219,9 +229,9 @@ def test_archive(tmpdir, dir_fac):
             uuid='f02c4745-46e5-11e3-8000-000000000000')
         request.execute()
         rm.archive_requests()
-        assert not os.path.exists(rm.requestsdir+'/0'), \
+        assert not os.path.exists(rm.requestsdir + '/0'), \
             'request 0 should not exist in requestsdir'
-        assert os.path.exists(rm.archivedir+'/0'), \
+        assert os.path.exists(rm.archivedir + '/0'), \
             'request 0 should exist in archivedir'
         directory.end_maintenance.assert_called_with({
             request.uuid: {'duration': 0, 'result': 'success'}})
@@ -246,3 +256,117 @@ def test_str(tmpdir, tz_utc):
 reason
 
 """.format(req[0].uuid[0:8], req[1].uuid[0:8], req[2].uuid[0:8]) == str(rm)
+
+
+def generate_snippets(tmp, *exitcodes):
+    tmp = str(tmp)
+    if not os.path.exists(tmp):
+        os.makedirs(tmp)
+    for i, exitcode in enumerate(exitcodes):
+        with open(tmp + '/' + str(i), 'w') as f:
+            f.write('exit {}\n'.format(exitcode))
+            os.fchmod(f.fileno(), 0o755)
+    return tmp
+
+
+def test_snippet_directory(tmpdir):
+    generate_snippets(tmpdir, 0, 69)
+    with pytest.raises(RuntimeError) as e:
+        run_snippets(str(tmpdir))
+    assert str(e.value) == 'Snippets encountered an error. Exit code: 69'
+
+
+def test_snippet_dir_highest_nonzero_wins(tmpdir):
+    generate_snippets(tmpdir, 1, 75, 69)
+    with pytest.raises(RuntimeError) as e:
+        run_snippets(str(tmpdir))
+    assert str(e.value) == 'Snippets encountered an error. Exit code: 75'
+
+
+def test_snippet_dir_should_skip_nonexecutable_files(tmpdir):
+    generate_snippets(tmpdir, 1, 0)
+    os.chmod(str(tmpdir) + '/0', 0o644)
+    run_snippets(str(tmpdir))
+
+
+@pytest.fixture
+def log_run_snippets(monkeypatch):
+    run_snippets = []
+    original = gocept.net.maintenance.reqmanager.run_snippets
+
+    def logged_run_snippets(dir):
+        run_snippets.append(dir.split('/')[-1])
+        return original(dir)
+    monkeypatch.setattr(
+        'gocept.net.maintenance.reqmanager.run_snippets', logged_run_snippets)
+    return run_snippets
+
+
+def test_execute_requests_stopped_by_prepare_scripts(tmpdir, log_run_snippets):
+    # Three requests: the first two are marked as due by the directory
+    # scheduler. The first runs to completion, but the second exits with
+    # TEMPFILE. The first request should be archived and processing should
+    # be suspended after the second request. The third request should not
+    # be touched.
+
+    with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
+        with request_population(3, tmpdir) as (rm, req):
+            rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 5)
+            rm.FINISH_SCRIPTS = generate_snippets(str(tmpdir / 'finish'))
+            req[0].starttime = datetime.datetime(
+                2011, 7, 27, 7, 0, tzinfo=pytz.utc)
+            req[0].save()
+            req[1].script = 'exit 75'
+            req[1].starttime = datetime.datetime(
+                2011, 7, 27, 7, 10, tzinfo=pytz.utc)
+            req[1].save()
+            rm.execute_requests()
+        assert log_run_snippets == ['prepare']
+        assert req[0].state == Request.DUE
+        assert req[1].state == Request.DUE
+        assert req[2].state == Request.PENDING
+
+
+def test_execute_requests_run_finish_scripts(tmpdir, log_run_snippets):
+    # Three requests: the first two are marked as due by the directory
+    # scheduler. The first runs to completion, but the second exits with
+    # TEMPFILE. The first request should be archived and processing should
+    # be suspended after the second request. The third request should not
+    # be touched.
+
+    with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
+        with request_population(3, tmpdir) as (rm, req):
+            rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 0)
+            rm.FINISH_SCRIPTS = generate_snippets(str(tmpdir / 'finish'))
+            req[0].starttime = datetime.datetime(
+                2011, 7, 27, 7, 0, tzinfo=pytz.utc)
+            req[0].save()
+            rm.execute_requests()
+        assert req[0].state == Request.SUCCESS
+        assert req[2].state == Request.PENDING
+    assert log_run_snippets == ['prepare', 'finish']
+
+
+def test_execute_requests_does_not_run_finish_scripts_on_fail(
+        tmpdir, log_run_snippets):
+    # Three requests: the first two are marked as due by the directory
+    # scheduler. The first runs to completion, but the second exits with
+    # TEMPFILE. The first request should be archived and processing should
+    # be suspended after the second request. The third request should not
+    # be touched.
+    with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
+        with request_population(3, tmpdir) as (rm, req):
+            rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 0)
+            rm.FINISH_SCRIPTS = generate_snippets(str(tmpdir / 'finish'), 0)
+            req[0].starttime = datetime.datetime(
+                2011, 7, 27, 7, 0, tzinfo=pytz.utc)
+            req[0].save()
+            req[1].script = 'exit 75'
+            req[1].starttime = datetime.datetime(
+                2011, 7, 27, 7, 10, tzinfo=pytz.utc)
+            req[1].save()
+            rm.execute_requests()
+        assert req[0].state == Request.SUCCESS
+        assert req[1].state == Request.TEMPFAIL
+        assert req[2].state == Request.PENDING
+    assert log_run_snippets == ['prepare']

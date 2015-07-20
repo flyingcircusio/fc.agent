@@ -4,12 +4,14 @@ from __future__ import print_function
 
 import calendar
 import fcntl
+import glob
 import gocept.net.directory
 import gocept.net.maintenance
 import logging
 import os
 import os.path
 import StringIO
+import subprocess
 import time
 
 LOG = logging.getLogger(__name__)
@@ -37,8 +39,41 @@ def require_directory(func):
     return with_directory_connection
 
 
+def spawn(command):
+    """Run shell script in current request's context."""
+    LOG.debug('running %r' % (command,))
+    p = subprocess.Popen([command], shell=True,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         stdin=subprocess.PIPE, cwd='/',
+                         close_fds=True)
+    stdout, stderr = p.communicate()
+    LOG.debug('returncode: %s' % (p.returncode,))
+    return p.returncode
+
+
+def run_snippets(snippet_directory):
+    if not os.path.isdir(snippet_directory):
+        raise RuntimeError('Snippet directory %r not found.'.format(dir))
+    exitcode = 0
+    for snippet in sorted(
+            glob.glob(os.path.join(snippet_directory, '*'))):
+        if not os.access(snippet, os.X_OK):
+            continue
+        # Not short-circuiting this to support convergence when multiple
+        # scripts may be depending on each others' successfull completion.
+        exitcode = max([exitcode, spawn(snippet)])
+    if exitcode != 0:
+        raise RuntimeError('Snippets encountered an error. '
+                           'Exit code: {}'.format(exitcode))
+
+
 class ReqManager(object):
+
     DEFAULT_DIR = '/var/spool/maintenance'
+
+    PREPARE_SCRIPTS = '/usr/local/lib/maintenance/prepare'
+    FINISH_SCRIPTS = '/usr/local/lib/maintenance/finish'
+
     TIMEFMT = '%Y-%m-%d %H:%M:%S %Z'
 
     def __init__(self, spooldir=DEFAULT_DIR):
@@ -197,7 +232,19 @@ class ReqManager(object):
         If there is an already active request, run to termination first.
         After that, select the oldest due request as next active request.
         """
-        for request in self.runnable_requests():
+        requests = list(self.runnable_requests())
+        if requests:
+            try:
+                run_snippets(self.PREPARE_SCRIPTS)
+            except Exception:
+                LOG.warning('prepare scripts returned unsuccessfully. '
+                            'not performing maintenance.')
+                return
+
+        # If we have requests, run the finish scripts. This may be toggled
+        # in case we encounter an error.
+        run_finish_scripts = bool(requests)
+        for request in requests:
             LOG.debug('next request is %s, starttime: %s',
                       request.uuid, request.starttime)
             request.execute()
@@ -205,11 +252,22 @@ class ReqManager(object):
             if state is gocept.net.maintenance.Request.TEMPFAIL:
                 LOG.info('(req %s) returned TEMPFAIL, suspending',
                          request.uuid)
+                run_finish_scripts = False
                 break
             if state in (gocept.net.maintenance.Request.ERROR,
                          gocept.net.maintenance.Request.RETRYLIMIT):
                 LOG.warning('(req %s) returned %s',
                             request.uuid, state.upper())
+                run_finish_scripts = False
+        else:
+            # All requests have been finished successfully.
+            if run_finish_scripts:
+                try:
+                    run_snippets(self.FINISH_SCRIPTS)
+                except Exception:
+                    LOG.warning('finish scripts returned unsuccessfully.')
+                    return
+            LOG.warning('not running finish scripts (yet)')
 
     @require_lock
     @require_directory

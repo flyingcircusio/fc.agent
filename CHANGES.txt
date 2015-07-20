@@ -4,6 +4,14 @@ Changelog
 1.7.1 (unreleased)
 ------------------
 
+- Refactor maintenance: introduce global prepare/finish scripts that
+  can be run when maintenance starts or finishes. This allows evacuating
+  KVM hosts or outmigrating Ceph OSDs before starting maintenance,
+  rebooting, etc. This decouples the jobs' awareness of its environment -
+  maitenance jobs can expect that a machine may get interrupted. The prepare
+  and finish scripts are required to be careful to stop maintenance and
+  put things back in order when maintenance is finished.
+
 - Protect against users re-registering local Unix usernames (like root, apache,
   or others) without us noticing. Currently you could still register them but
   things would break on your   machines anyway.

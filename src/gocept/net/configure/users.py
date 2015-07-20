@@ -92,7 +92,6 @@ class UserConfig(object):
         # Step 1: Home directory creation
 
         # Update passwd and shadow records
-        import pdb; pdb.set_trace()
         user_pwd = self.etcpasswd.get(user['uid'], create=True)
         if not hasattr(user_pwd, 'uid'):
             # Initial creation: set ID
