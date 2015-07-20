@@ -3,7 +3,6 @@ from gocept.net.utils import log_call
 import gocept.net.configfile
 import gocept.net.directory
 import json
-import json
 import logging
 import os
 
@@ -31,6 +30,7 @@ class Puppetmaster(object):
         self.nodes.sort()
         conffile = gocept.net.configfile.ConfigFile(self.autosign_conf)
         conffile.write('\n'.join(self.nodes))
+        conffile.write('\n')
         conffile.commit()
 
     def delete_nodes(self):
@@ -39,21 +39,24 @@ class Puppetmaster(object):
         for name, node in deletions.items():
             name = '{0}.{1}'.format(name, self.suffix)
             if 'soft' in node['stages']:
-                status = log_call(
+                out = log_call(
                     ['puppet', 'node', '--render-as', 'json', 'status', name])
-                status = json.loads(status)[0]
+                status = json.loads(out)
+                if not status:
+                    continue
+                status = status[0]
                 assert status['name'] == name
                 # The dict will not contain the 'deactivated' field when the
                 # VM is completely purged. We return 'deleted' as a True
                 # marker for this case. Otherwise 'deactivated' contains the
                 # date when the node was deactivated, or null if it is active.
                 if not status.get('deactivated', 'deleted'):
-                    print 'Deactivating {}'.format(name)
+                    print('Deactivating {}'.format(name))
                     log_call(['puppet', 'node', 'deactivate', name])
             if 'hard' in node['stages']:
                 cert = self.cert_location.format(name)
                 if os.path.exists(cert):
-                    print 'Cleaning {}'.format(name)
+                    print('Cleaning {}'.format(name))
                     log_call(['puppet', 'node', 'clean', name])
 
     def sign_race_conditions(self):

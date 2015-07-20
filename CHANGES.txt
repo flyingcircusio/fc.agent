@@ -1,12 +1,19 @@
 Changelog
 =========
 
-1.6.9 (unreleased)
+1.7.1 (unreleased)
 ------------------
 
 - Protect against users re-registering local Unix usernames (like root, apache,
   or others) without us noticing. Currently you could still register them but
   things would break on your   machines anyway.
+
+
+1.7.0 (2015-07-01)
+------------------
+
+- Automatic Kibana configuration (#16002).
+- Parallelize localconfig-kvm-init (#14920).
 
 
 1.6.8 (2015-06-03)
