@@ -84,6 +84,18 @@ class PgNumPolicy(object):
         pool.pg_num = 2 ** math.frexp(pool.pg_num + 1)[1]
         pool.fix_options()
 
+    def ensure_pgp_count(self, pool):
+        """Align pgp_num with pg_num.
+
+        This should normally not be necessary, but it is possible that
+        ensure_ratio hits a timeout before all PG have been created. In
+        this case, pgp_num is left less than pg_num and needs to be
+        fixed in a future run.
+        """
+        print('Pool {}: pgp_num={} < pg_num={}, fixing'.format(
+            pool.name, pool.pgp_num, pool.pg_num))
+        pool.pgp_num = pool.pg_num
+
     def ensure(self):
         """Go through pool in random order and fix pg levelling.
 
@@ -94,10 +106,13 @@ class PgNumPolicy(object):
         pools = Pools(self.ceph)
         poolnames = list(pools.names())
         random.shuffle(poolnames)
-        for poolname in poolnames[0:50]:
+        for poolname in poolnames[0:25]:
             pool = pools[poolname]
             ratio = float(pool.size_total_gb) / float(pool.pg_num)
-            if pool.pg_num < self.ceph.default_pg_num():
+            if pool.pgp_num < pool.pg_num:
+                self.ensure_pgp_count(pool)
+                return
+            elif pool.pg_num < self.ceph.default_pg_num():
                 self.ensure_minimum_pgs(pool)
                 return
             elif ratio > self.gb_per_pg:
@@ -110,7 +125,7 @@ def pg_num():
     p.add_argument('-n', '--dry-run', help='show what would be done only',
                    default=False, action='store_true')
     p.add_argument('-r', '--gb-per-pg', metavar='RATIO', type=float,
-                   default=4.0, help='Adjust pg_num so that there are at most '
+                   default=8.0, help='Adjust pg_num so that there are at most '
                    'RATIO GiB data per PG (default: %(default)s)')
     p.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
                    help='path to ceph.conf (default: %(default)s)')

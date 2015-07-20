@@ -74,6 +74,7 @@ class Pool(object):
         self.cluster = cluster
         self._images = None
         self._pg_num = None
+        self._pgp_num = None
 
     def get(self, imagename):
         """Deprecated. Use pool[imagename] instead."""
@@ -138,10 +139,25 @@ class Pool(object):
         it again. Note that this method may take a while to complete.
         """
         self.cluster.ceph_osd(['pool', 'set', self.name, 'pg_num', str(value)])
+        self._pg_num = int(value)
+        self.pgp_num = value
+
+    @property
+    def pgp_num(self):
+        if self._pgp_num:
+            return self._pgp_num
+        out = self.cluster.ceph_osd(['pool', 'get', self.name, 'pgp_num'],
+                                    ignore_dry_run=True)
+        pginfo = json.loads(out[0])
+        self._pgp_num = int(pginfo['pgp_num'])
+        return self._pgp_num
+
+    @pgp_num.setter
+    def pgp_num(self, value):
         retry = 0
-        max_retries = 25
+        max_retries = 30
         while retry < max_retries:
-            time.sleep(min([15, 1.2 ** retry]))
+            time.sleep(min([30, 1.2 ** retry]))
             out, err, returncode = self.cluster.ceph_osd([
                 'pool', 'set', self.name, 'pgp_num', str(value)],
                 accept_failure=True)
@@ -154,7 +170,7 @@ class Pool(object):
                 self.name, value), out, err, returncode)
         if retry >= max_retries:
             raise RuntimeError('max retries exceeded while setting pgp_num')
-        self._pg_num = int(value)
+        self._pgp_num = int(value)
 
     @property
     def size_total_gb(self):

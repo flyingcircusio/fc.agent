@@ -50,7 +50,10 @@ class TestPools(object):
 
     def test_create_should_add_pool(self, cluster):
         self.call_args = []
-        def record_call_args(args): self.call_args.append(args)
+
+        def record_call_args(args):
+            self.call_args.append(args)
+
         setattr(cluster, 'ceph_osd', record_call_args)
         Pools(cluster).create('new_pool')
         assert [['pool', 'create', 'new_pool', '32']] == self.call_args
@@ -132,11 +135,24 @@ class TestPool(object):
         p = Pool('test', cluster)
         p.pg_num = 32
         assert p.pg_num == 32
+        assert p.pgp_num == 32
         assert behaviour_model.calls == [
             ['pool', 'set', 'test', 'pg_num', '32'],
             ['pool', 'set', 'test', 'pgp_num', '32'],
             ['pool', 'set', 'test', 'pgp_num', '32'],
         ]
+
+    def test_get_pgp_num(self, cluster):
+        setattr(cluster, 'ceph_osd', lambda args, ignore_dry_run: (
+            '{"pool":"test","pool_id":161,"pgp_num":128}', ''))
+        assert 128 == Pool('test', cluster).pgp_num
+
+    def test_set_pgp_num_failure(self, cluster, monkeypatch):
+        setattr(cluster, 'ceph_osd', lambda args, accept_failure: (
+            '', 'failed', 1))
+        monkeypatch.setattr(time, 'sleep', lambda t: None)
+        with pytest.raises(RuntimeError):
+            Pool('test', cluster).pgp_num = 100
 
     def test_total_size_gb(self, pools):
         assert 25 == pools['test'].size_total_gb
