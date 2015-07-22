@@ -9,7 +9,6 @@ import gocept.net.directory
 import gocept.net.maintenance
 import logging
 import os
-import os.path
 import StringIO
 import subprocess
 import time
@@ -41,30 +40,25 @@ def require_directory(func):
 
 def spawn(command):
     """Run shell script in current request's context."""
-    LOG.debug('running %r' % (command,))
-    p = subprocess.Popen([command], shell=True,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         stdin=subprocess.PIPE, cwd='/',
-                         close_fds=True)
-    stdout, stderr = p.communicate()
-    LOG.debug('returncode: %s' % (p.returncode,))
-    return p.returncode
+    LOG.debug('running %s', command)
+    returncode = subprocess.call([command], close_fds=True)
+    LOG.debug('returncode: %s', returncode)
+    return returncode
 
 
 def run_snippets(snippet_directory):
+    """Run all executables in a dir and return the maximum exit code."""
     if not os.path.isdir(snippet_directory):
-        raise RuntimeError('Snippet directory %r not found.'.format(dir))
-    exitcode = 0
+        raise RuntimeError('Snippet directory {} not found.'.format(dir))
+    returncodes = [0]
     for snippet in sorted(
             glob.glob(os.path.join(snippet_directory, '*'))):
         if not os.access(snippet, os.X_OK):
             continue
-        # Not short-circuiting this to support convergence when multiple
-        # scripts may be depending on each others' successfull completion.
-        exitcode = max([exitcode, spawn(snippet)])
-    if exitcode != 0:
-        raise RuntimeError('Snippets encountered an error. '
-                           'Exit code: {}'.format(exitcode))
+        # Not short-circuiting this to support convergence
+        returncodes.append(spawn(snippet))
+    if max(returncodes) != 0:
+        raise RuntimeError('Snippets encountered an error')
 
 
 class ReqManager(object):
@@ -236,9 +230,10 @@ class ReqManager(object):
         if requests:
             try:
                 run_snippets(self.PREPARE_SCRIPTS)
-            except Exception:
-                LOG.warning('prepare scripts returned unsuccessfully. '
+            except RuntimeError as e:
+                LOG.warning('prepare scripts returned unsuccessfully, '
                             'not performing maintenance.')
+                LOG.debug('exception: %s', e)
                 return
 
         # If we have requests, run the finish scripts. This may be toggled
@@ -258,16 +253,15 @@ class ReqManager(object):
                          gocept.net.maintenance.Request.RETRYLIMIT):
                 LOG.warning('(req %s) returned %s',
                             request.uuid, state.upper())
-                run_finish_scripts = False
         else:
             # All requests have been finished successfully.
             if run_finish_scripts:
                 try:
                     run_snippets(self.FINISH_SCRIPTS)
-                except Exception:
+                except RuntimeError as e:
                     LOG.warning('finish scripts returned unsuccessfully.')
+                    LOG.debug('exception: %s', e)
                     return
-            LOG.warning('not running finish scripts (yet)')
 
     @require_lock
     @require_directory

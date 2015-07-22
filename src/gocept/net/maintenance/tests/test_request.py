@@ -232,13 +232,22 @@ def test_execute_should_write_exitcode(tmpdir):
         assert f.read() == '70\n'
 
 
-def test_applicable_error(tmpdir):
+def test_not_applicable_but_success(tmpdir):
     request = Request(0, 1, script='true', applicable='exit 1',
                       path=str(tmpdir))
     request.save()
     request.execute()
+    assert request.state == Request.SUCCESS
+    assert request.exitcode == 0
+
+
+def test_applicable_error(tmpdir):
+    request = Request(0, 1, script='true', applicable='exit 2',
+                      path=str(tmpdir))
+    request.save()
+    request.execute()
     assert request.state == Request.ERROR
-    assert request.exitcode == 1
+    assert request.exitcode == 2
 
 
 def test_applicable_postpone(tmpdir):

@@ -8,6 +8,7 @@ import sys
 
 
 def parse_estimate(estimate):
+    """Converts suffixed time string into seconds."""
     if estimate.endswith('s'):
         return int(estimate[:-1])
     elif estimate.endswith('m'):

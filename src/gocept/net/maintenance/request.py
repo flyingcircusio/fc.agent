@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import datetime
-import glob
 import gocept.net.utils
 import iso8601
 import json
@@ -171,20 +170,25 @@ class Request(object):
         return p.returncode
 
     def is_applicable(self):
-        """Test this activity's applicability."""
+        """Test this activity's applicability.
+
+        Exit codes are intepreted as follows:
+            0: proceed with script execution
+            1: don't proceed, but mark as SUCCESS
+        Other exit codes from Exec.* apply as always.
+        """
         if not self.applicable:
             return 0
-        LOG.debug('(req %s) testing if activity is applicable' % self.uuid)
+        LOG.debug('(req %s) testing if activity is applicable', self.uuid)
         if os.path.isdir(self.applicable):
             # We used to support snippet directories here, but those were
             # moved to the global prepare/finish feature.
             return
-        else:
-            exitcode = self.spawn(self.applicable)
-            if exitcode != 0:
-                LOG.info('(req %s) not applicable (exit %s)', self.uuid,
-                         exitcode)
-                return exitcode
+        exitcode = self.spawn(self.applicable)
+        if exitcode != 0:
+            LOG.info('(req %s) not applicable (exit %s)', self.uuid,
+                     exitcode)
+            return exitcode
         return 0
 
     def execute(self):
@@ -193,6 +197,9 @@ class Request(object):
         Run the `applicable` script first if there is one. If it fails,
         consider the maintenance activity as non-applicable and archive
         the script immediately.
+
+        If `applicable` exits with code 1, the script execution is
+        skipped but the request is marked as SUCCESS.
         """
         LOG.info('(req %s) starting execution', self.uuid)
         self.start()
@@ -204,7 +211,10 @@ class Request(object):
                 LOG.warning('(req %s) script exited with %i', self.uuid,
                             exitcode)
         else:
-            exitcode = applicable
+            if applicable == 1:
+                exitcode = 0
+            else:
+                exitcode = applicable
         with open(os.path.join(self.path, 'exitcode'), 'a') as f:
             print(exitcode, file=f)
         self.stop()
