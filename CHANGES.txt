@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.1 (unreleased)
+1.7.1 (2015-07-22)
 ------------------
 
 - Mark maintenance jobs as SUCCESS (but don't run the script) is `applicable`
