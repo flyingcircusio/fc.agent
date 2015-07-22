@@ -58,7 +58,8 @@ def run_snippets(snippet_directory):
         # Not short-circuiting this to support convergence
         returncodes.append(spawn(snippet))
     if max(returncodes) != 0:
-        raise RuntimeError('Snippets encountered an error')
+        raise RuntimeError('Snippets directory {} overall status {}'.format(
+            snippet_directory, max(returncodes)))
 
 
 class ReqManager(object):
