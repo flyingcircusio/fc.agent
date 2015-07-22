@@ -243,7 +243,7 @@ class ReqManager(object):
 
         # If we have requests, run the finish scripts. This may be toggled
         # in case we encounter an error.
-        run_finish_scripts = bool(requests)
+        run_finish_scripts = True
         for request in requests:
             LOG.debug('next request is %s, starttime: %s',
                       request.uuid, request.starttime)
@@ -266,8 +266,8 @@ class ReqManager(object):
                     run_snippets(self.FINISH_SCRIPTS)
                 except Exception:
                     LOG.warning('finish scripts returned unsuccessfully.')
-                    return
-            LOG.warning('not running finish scripts (yet)')
+	    else:
+                LOG.warning('not running finish scripts (yet)')
 
     @require_lock
     @require_directory
