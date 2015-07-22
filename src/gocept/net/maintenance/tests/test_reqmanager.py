@@ -264,7 +264,10 @@ def generate_snippets(tmp, *exitcodes):
         os.makedirs(tmp)
     for i, exitcode in enumerate(exitcodes):
         with open(tmp + '/' + str(i), 'w') as f:
-            f.write('exit {}\n'.format(exitcode))
+            f.write("""\
+#!/bin/sh
+exit {}
+""".format(exitcode))
             os.fchmod(f.fileno(), 0o755)
     return tmp
 
@@ -273,14 +276,14 @@ def test_snippet_directory(tmpdir):
     generate_snippets(tmpdir, 0, 69)
     with pytest.raises(RuntimeError) as e:
         run_snippets(str(tmpdir))
-    assert str(e.value) == 'Snippets encountered an error. Exit code: 69'
+    assert 'overall status 69' in str(e.value)
 
 
 def test_snippet_dir_highest_nonzero_wins(tmpdir):
     generate_snippets(tmpdir, 1, 75, 69)
     with pytest.raises(RuntimeError) as e:
         run_snippets(str(tmpdir))
-    assert str(e.value) == 'Snippets encountered an error. Exit code: 75'
+    assert 'overall status 75' in str(e.value)
 
 
 def test_snippet_dir_should_skip_nonexecutable_files(tmpdir):
