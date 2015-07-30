@@ -41,7 +41,11 @@ class Cluster(object):
         """Returns default pg count for new pools."""
         if not self.config:
             self.parse_config()
-        return self.config.getint('global', 'osd pool default pg num')
+        try:
+            return self.config.getint('global', 'osd pool default pg num')
+        except ConfigParser.NoOptionError:
+            # ceph default value
+            return 8
 
     def generic_ceph_cmd(self, base_args, more_args, accept_failure=False,
                          ignore_dry_run=False):

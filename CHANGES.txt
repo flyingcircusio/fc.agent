@@ -4,7 +4,7 @@ Changelog
 1.7.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Delete unused pools (no RG or RG contains no VMs) (#14997).
 
 
 1.7.1 (2015-07-22)

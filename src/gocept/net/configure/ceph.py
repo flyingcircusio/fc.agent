@@ -14,15 +14,17 @@ class ResourcegroupPoolEquivalence(object):
 
     PROTECTED_POOLS = ['rbd', 'data', 'metadata']
 
-    def __init__(self, directory, cluster):
+    def __init__(self, directory, cluster, location):
         self.directory = directory
         self.pools = Pools(cluster)
+        self.location = location
 
     def expected(self):
-        rgs = self.directory.list_resource_groups()
-        if len(rgs) < 1:
+        vms = self.directory.list_virtual_machines(self.location)
+        rgs = set(vm['parameters']['resource_group'] for vm in vms)
+        if not len(rgs):
             raise RuntimeError('no RGs returned -- directory ok?')
-        return set(rgs)
+        return rgs
 
     def actual(self):
         return set(p for p in self.pools.names()
@@ -37,6 +39,7 @@ class ResourcegroupPoolEquivalence(object):
         for pool in act - exp:
             print('deleting pool {}'.format(pool))
             self.pools[pool].delete()
+            return
 
 
 def pools():
@@ -48,11 +51,12 @@ def pools():
     p.add_argument('-i', '--id', default='admin', metavar='USER',
                    help='rados user (without the "client." prefix) to '
                    'authenticate as (default: %(default)s)')
+    p.add_argument('LOCATION', help='location id (e.g., "dev")')
     args = p.parse_args()
     ceph = Cluster(args.conf, args.id, args.dry_run)
     with gocept.net.directory.exceptions_screened():
         rpe = ResourcegroupPoolEquivalence(
-            gocept.net.directory.Directory(), ceph)
+            gocept.net.directory.Directory(), ceph, args.LOCATION)
         rpe.ensure()
 
 
