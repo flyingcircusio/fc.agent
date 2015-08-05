@@ -63,6 +63,7 @@ def run_snippets(snippet_directory):
 
 
 class ReqManager(object):
+    """Container for Requests."""
 
     DEFAULT_DIR = '/var/spool/maintenance'
 
@@ -239,7 +240,6 @@ class ReqManager(object):
 
         # If we have requests, run the finish scripts. This may be toggled
         # in case we encounter an error.
-        run_finish_scripts = True
         for request in requests:
             LOG.debug('next request is %s, starttime: %s',
                       request.uuid, request.starttime)
@@ -248,21 +248,19 @@ class ReqManager(object):
             if state is gocept.net.maintenance.Request.TEMPFAIL:
                 LOG.info('(req %s) returned TEMPFAIL, suspending',
                          request.uuid)
-                run_finish_scripts = False
-                break
+                break  # skips 'else' clause
             if state in (gocept.net.maintenance.Request.ERROR,
                          gocept.net.maintenance.Request.RETRYLIMIT):
                 LOG.warning('(req %s) returned %s',
                             request.uuid, state.upper())
         else:
             # All requests have been finished successfully.
-            if run_finish_scripts:
-                try:
-                    run_snippets(self.FINISH_SCRIPTS)
-                except RuntimeError as e:
-                    LOG.warning('finish scripts returned unsuccessfully.')
-                    LOG.debug('exception: %s', e)
-                    return
+            try:
+                run_snippets(self.FINISH_SCRIPTS)
+            except RuntimeError as e:
+                LOG.warning('finish scripts returned unsuccessfully.')
+                LOG.debug('exception: %s', e)
+                return
 
     @require_lock
     @require_directory
