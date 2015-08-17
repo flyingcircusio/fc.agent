@@ -15,7 +15,6 @@ class Iptables(object):
     RULESFILES = {
         4: '/var/lib/iptables/rules.d/filter/INPUT/40resourcegroup',
         6: '/var/lib/ip6tables/rules.d/filter/INPUT/40resourcegroup'}
-    PUPPET_LOCKFILE = '/var/lib/puppet/state/agent_catalog_run.lock'
 
     def __init__(self, location, rg, iface, vlan):
         """Create Iptables configuration for iface with location and vlan."""
@@ -56,18 +55,6 @@ class Iptables(object):
         """Trigger reload of changed iptables rules."""
         subprocess.check_call(['/usr/local/sbin/update-iptables'])
 
-    def puppet_catalog_run(self):
-        try:
-            with open(self.PUPPET_LOCKFILE) as f:
-                pid = int(f.read())
-        except (IOError, OSError, ValueError):
-            return False
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        return True
-
     def run(self):
         self.write_rg_input_rules()
         self.reload_iptables()
@@ -86,8 +73,5 @@ def inputrules():
     args = p.parse_args()
     iptables = Iptables(args.location, args.rg, args.iface, args.vlan)
     if not iptables.feature_enabled():
-        return
-    if iptables.puppet_catalog_run():
-        print('iptables: puppet agent catalog run in progress, skipping')
         return
     iptables.run()
