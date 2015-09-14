@@ -7,6 +7,13 @@ import subprocess
 
 
 class Disk(object):
+    # This part of the resizing code does not know or care about the intended
+    # size of the disk. It only checks what size the disk has and then
+    # aligns the partition table and filesystems appropriately.
+    #
+    # The actual sizing of the disk is delegated to the KVM host management
+    # utilities and happens independently.
+
     # 5G disk size granularity -> 2.5G sampling -> 512 byte sectors
     FREE_SECTOR_THRESHOLD = (5 * (1024 * 1024 * 1024) / 2) / 512
 
