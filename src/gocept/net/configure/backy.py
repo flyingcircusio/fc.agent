@@ -1,18 +1,21 @@
-import socket
+"""Generates /etc/backy.conf from directory data."""
+
+import gocept.net.configfile
 import gocept.net.directory
 import logging
 import os
 import os.path
-import subprocess
 import shutil
+import socket
+import subprocess
 
 logger = logging.getLogger()
 
 CONFIG_TEMPLATE = """\
----
+# Managed by localconfig, don't edit
 
 global:
-    base-dir: /srv/backy/
+    base-dir: /srv/backy
     worker-limit: 3
 
 schedules:
@@ -45,7 +48,7 @@ jobs:
 {jobs}
 """
 
-JOB_TEMPLATE = """
+JOB_TEMPLATE = """\
     {name}:
         source:
             type: flyingcircus
@@ -87,9 +90,8 @@ class BackyConfig(object):
                 schedule=vm['parameters'].get('backy_schedule', 'default')))
 
         jobs = '\n'.join(jobs)
-
         output = gocept.net.configfile.ConfigFile(
-            self.prefix + '/etc/backy.conf')
+            self.prefix + '/etc/backy.conf', mode=0o640)
         output.write(CONFIG_TEMPLATE.format(jobs=jobs))
         self.changed = output.commit()
 

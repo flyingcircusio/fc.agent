@@ -43,10 +43,10 @@ def test_backy_config(tmpdir, capsys, monkeypatch, directory):
         mock.call(['/etc/init.d/backy', 'restart'])]
 
     assert open(prefix + '/etc/backy.conf').read() == """\
----
+# Managed by localconfig, don't edit
 
 global:
-    base-dir: /srv/backy/
+    base-dir: /srv/backy
     worker-limit: 3
 
 schedules:
@@ -76,7 +76,6 @@ schedules:
             keep: 4
 
 jobs:
-
     test01:
         source:
             type: flyingcircus

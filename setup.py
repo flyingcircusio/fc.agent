@@ -35,6 +35,7 @@ system configuration.
     entry_points={
         'console_scripts': [
             'list-maintenance = gocept.net.maintenance.script:list',
+            'localconfig-backy = gocept.net.configure.backy:configure',
             'localconfig-bacula-purge-stamps = gocept.net.configure.bacula:purge_stamps',
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
