@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.3 (unreleased)
+1.7.3 (2015-09-21)
 ------------------
 
 - localconfig-backy writes backy.conf from directory ENC data (#13456).
