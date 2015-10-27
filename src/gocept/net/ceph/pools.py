@@ -155,7 +155,7 @@ class Pool(object):
     @pgp_num.setter
     def pgp_num(self, value):
         retry = 0
-        max_retries = 30
+        max_retries = 40
         while retry < max_retries:
             time.sleep(min([30, 1.2 ** retry]))
             out, err, returncode = self.cluster.ceph_osd([
