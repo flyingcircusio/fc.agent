@@ -36,7 +36,7 @@ system configuration.
         'console_scripts': [
             'list-maintenance = gocept.net.maintenance.script:list',
             'localconfig-backy = gocept.net.configure.backy:configure',
-            'localconfig-bacula-purge-stamps = gocept.net.configure.bacula:purge_stamps',
+            'localconfig-bacula-purge = gocept.net.configure.bacula:purge',
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
