@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.4 (unreleased)
+1.7.4 (2015-10-30)
 ------------------
 
 - backy config: generate valid config file even when there are no jobs present
