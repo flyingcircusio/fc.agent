@@ -25,11 +25,11 @@ def test_backy_config(tmpdir, capsys, monkeypatch, directory):
 
     check_call = mock.Mock()
     monkeypatch.setattr(subprocess, 'check_call', check_call)
-    monkeypatch.setattr(socket, 'gethostname', lambda: 'thishost')
 
     os.environ['PUPPET_LOCATION'] = 'test'
     os.environ['CONSUL_ACL_TOKEN'] = 'theconsultoken'
     prefix = BackyConfig.prefix = str(tmpdir)
+    BackyConfig.hostname = 'thishost'
     os.makedirs(prefix + '/etc')
     os.makedirs(prefix + '/srv/backy/node00')
     os.makedirs(prefix + '/srv/backy/node01')
@@ -41,49 +41,24 @@ def test_backy_config(tmpdir, capsys, monkeypatch, directory):
 
     assert check_call.call_args_list == [
         mock.call(['/etc/init.d/backy', 'restart'])]
-
-    assert open(prefix + '/etc/backy.conf').read() == """\
+    with open(prefix + '/etc/backy.conf') as c:
+        assert c.read() == """\
 # Managed by localconfig, don't edit
-
-global:
-    base-dir: /srv/backy
-    worker-limit: 3
-
-schedules:
-    default:
-        daily:
-            interval: 1d
-            keep: 9
-        weekly:
-            interval: 7d
-            keep: 5
-        monthly:
-            interval: 30d
-            keep: 4
-
-    frequent:
-        hourly:
-            interval: 1h
-            keep: 25
-        daily:
-            interval: 1d
-            keep: 9
-        weekly:
-            interval: 7d
-            keep: 5
-        monthly:
-            interval: 30d
-            keep: 4
-
+global: {base-dir: /srv/backy, worker-limit: 3}
 jobs:
-    test01:
-        source:
-            type: flyingcircus
-            vm: test01
-            consul_acl_token: theconsultoken
-        schedule: asdf
-
-
+  test01:
+    schedule: asdf
+    source: {consul_acl_token: theconsultoken, type: flyingcircus, vm: test01}
+schedules:
+  default:
+    daily: {interval: 1d, keep: 10}
+    monthly: {interval: 30d, keep: 4}
+    weekly: {interval: 7d, keep: 4}
+  frequent:
+    daily: {interval: 1d, keep: 10}
+    hourly: {interval: 1h, keep: 25}
+    monthly: {interval: 30d, keep: 4}
+    weekly: {interval: 7d, keep: 4}
 """
 
     assert os.path.exists(prefix + '/srv/backy/node00')

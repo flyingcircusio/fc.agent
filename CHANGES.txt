@@ -4,7 +4,10 @@ Changelog
 1.7.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- backy config: generate valid config file even when there are no jobs present
+  (#13456).
+- Generalize bacula purge code, rename localconfig-bacula-purge-stamps to
+  localconfig-bacula-purge (#13456).
 
 
 1.7.3 (2015-09-21)
