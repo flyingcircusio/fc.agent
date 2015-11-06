@@ -4,7 +4,9 @@ Changelog
 1.7.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Omit deleted nodes from generated backy configuration (#13456).
+- Include explicit values for pool and image in generated backy configuration
+  (#13456).
 
 
 1.7.4 (2015-10-30)
