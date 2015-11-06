@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.5 (unreleased)
+1.7.5 (2015-11-06)
 ------------------
 
 - Omit deleted nodes from generated backy configuration (#13456).
