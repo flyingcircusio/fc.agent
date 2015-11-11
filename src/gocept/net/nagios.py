@@ -103,7 +103,7 @@ def check_vm_bootstrap():
     present in Nagios. This is done to verify correct VM bootstrap behavior."""
 
     argp = argparse.ArgumentParser(description=__doc__)
-    argp.add_argument('-p', '--nagios_path', default='/etc/nagios/hosts',
+    argp.add_argument('-p', '--nagios-path', default='/etc/nagios/hosts',
                       help='The path to the Nagios hosts directory. '
                       '(default: %(default)s)')
     argp.add_argument('-g', '--grace-period', default='1440',
