@@ -39,6 +39,7 @@ class VMBootstrap(nagiosplugin.Resource):
         nodes_directory_knows = [
             node['name'] for node in nodes
             if node['parameters']['servicing']
+            if node['parameters'].get('online', True)
             if node['parameters']['profile'] == 'generic']
         # XXX There are nodes which are not managed by puppet. Thus they don't
         # appear in Nagios. But in directory.
