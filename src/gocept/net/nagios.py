@@ -1,6 +1,7 @@
-
 import argparse
+import datetime
 import gocept.net.directory
+import iso8601
 import logging
 import nagiosplugin
 import os
@@ -12,9 +13,10 @@ log = logging.getLogger('nagiosplugin')
 
 class VMBootstrap(nagiosplugin.Resource):
 
-    def __init__(self, nagios_path):
+    def __init__(self, nagios_path, grace_period):
         self.vm_bootstraps_failed = []
         self.nagios_path = nagios_path
+        self.grace_period = grace_period  # in minutes
 
     def nodes_directory_knows(self):
         """Returns a list of VMs that should be running in the current location
@@ -36,11 +38,16 @@ class VMBootstrap(nagiosplugin.Resource):
         directory = gocept.net.directory.Directory()
         this_node = directory.lookup_node(socket.gethostname())
         nodes = directory.list_nodes(this_node['parameters']['location'])
+        reference_date = (datetime.datetime.now(iso8601.UTC)
+                          - datetime.timedelta(minutes=self.grace_period))
         nodes_directory_knows = [
             node['name'] for node in nodes
             if node['parameters']['servicing']
             if node['parameters'].get('online', True)
-            if node['parameters']['profile'] == 'generic']
+            if node['parameters']['profile'] == 'generic'
+            if (iso8601.parse_date(node['parameters']['creation_date'])
+                < reference_date)]
+
         nodes_directory_knows.sort()
         # XXX There are nodes which are not managed by puppet. Thus they don't
         # appear in Nagios. But in directory.
@@ -99,9 +106,11 @@ def check_vm_bootstrap():
     argp.add_argument('-p', '--nagios_path', default='/etc/nagios/hosts',
                       help='The path to the Nagios hosts directory. '
                       '(default: %(default)s)')
-    argp.add_argument('-g', '--grace_period', default='1440',
-                      help='The grace period until a VM\'s bootstrap is '
-                      ' considered incomplete. (default: %(default)s)')
+    argp.add_argument('-g', '--grace-period', default='1440',
+                      help='The grace period until a VM\'s bootstrap is'
+                      ' considered incomplete, in minutes.'
+                      ' (default: %(default)s)',
+                      type=int)
     argp.add_argument('-w', '--warning', metavar='RANGE', default='0',
                       help='The warning threshold for the number of VMs not '
                       'having been bootstrapped.')
@@ -114,7 +123,7 @@ def check_vm_bootstrap():
                       help='check execution timeout (default: %(default)s)')
     args = argp.parse_args()
     check = nagiosplugin.Check(
-        VMBootstrap(args.nagios_path),
+        VMBootstrap(args.nagios_path, args.grace_period),
         nagiosplugin.ScalarContext('vmbootstrap', args.warning, args.critical),
         VMBootstrapSummary())
     check.main(verbose=args.verbose, timeout=args.timeout)
