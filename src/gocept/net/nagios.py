@@ -107,7 +107,7 @@ def check_vm_bootstrap():
                       'having been bootstrapped.')
     argp.add_argument('-v', '--verbose', action='count', default=0,
                       help='increase output verbosity (use up to 3 times)')
-    argp.add_argument('-t', '--timeout', default=10,
+    argp.add_argument('-t', '--timeout', default=30,
                       help='check execution timeout (default: %(default)s)')
     args = argp.parse_args()
     check = nagiosplugin.Check(
