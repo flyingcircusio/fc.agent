@@ -41,6 +41,7 @@ class VMBootstrap(nagiosplugin.Resource):
             if node['parameters']['servicing']
             if node['parameters'].get('online', True)
             if node['parameters']['profile'] == 'generic']
+        nodes_directory_knows.sort()
         # XXX There are nodes which are not managed by puppet. Thus they don't
         # appear in Nagios. But in directory.
         log.debug('VMs that Directory knows: %s', ' '.join(nodes_directory_knows))
