@@ -7,6 +7,9 @@ import os
 import socket
 
 
+log = logging.getLogger('nagiosplugin')
+
+
 class VMBootstrap(nagiosplugin.Resource):
 
     def __init__(self, nagios_path):
@@ -39,8 +42,7 @@ class VMBootstrap(nagiosplugin.Resource):
             if node['parameters']['profile'] == 'generic']
         # XXX There are nodes which are not managed by puppet. Thus they don't
         # appear in Nagios. But in directory.
-        logging.debug('VMs that Directory knows: %s',
-                      ' '.join(nodes_directory_knows))
+        log.debug('VMs that Directory knows: %s', ' '.join(nodes_directory_knows))
         return nodes_directory_knows
 
     def nodes_nagios_knows(self):
@@ -49,7 +51,7 @@ class VMBootstrap(nagiosplugin.Resource):
         """
         nodes_nagios_knows = next(os.walk(self.nagios_path))[1]
 
-        logging.debug('VMs that Nagios knows: %s',
+        log.debug('VMs that Nagios knows: %s',
                       ' '.join(nodes_nagios_knows))
 
         return nodes_nagios_knows
@@ -64,7 +66,7 @@ class VMBootstrap(nagiosplugin.Resource):
 
         for vm_probe in nodes_directory_knows:
             if vm_probe not in nodes_nagios_knows:
-                logging.info('%s failed to bootstrap.', vm_probe)
+                log.info('%s failed to bootstrap.', vm_probe)
                 self.vm_bootstraps_failed.append(vm_probe)
 
         self.vm_bootstraps_failed.sort()
