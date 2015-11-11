@@ -44,7 +44,8 @@ class VMBootstrap(nagiosplugin.Resource):
         nodes_directory_knows.sort()
         # XXX There are nodes which are not managed by puppet. Thus they don't
         # appear in Nagios. But in directory.
-        log.debug('VMs that Directory knows: %s', ' '.join(nodes_directory_knows))
+        log.debug('VMs that Directory knows: %s',
+                  ' '.join(nodes_directory_knows))
         return nodes_directory_knows
 
     def nodes_nagios_knows(self):
@@ -54,7 +55,7 @@ class VMBootstrap(nagiosplugin.Resource):
         nodes_nagios_knows = next(os.walk(self.nagios_path))[1]
 
         log.debug('VMs that Nagios knows: %s',
-                      ' '.join(nodes_nagios_knows))
+                  ' '.join(nodes_nagios_knows))
 
         return nodes_nagios_knows
 
