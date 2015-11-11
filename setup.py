@@ -35,7 +35,7 @@ system configuration.
     ],
     entry_points={
         'console_scripts': [
-            'check-vm-bootstrap = gocept.net.nagios:check_vm_bootstrap',
+            'check-nagios-directory-sync = gocept.net.nagios:check_nagios_directory_sync',
             'list-maintenance = gocept.net.maintenance.script:list',
             'localconfig-backy = gocept.net.configure.backy:configure',
             'localconfig-bacula-purge = gocept.net.configure.bacula:purge',

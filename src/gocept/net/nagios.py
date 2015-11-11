@@ -114,7 +114,7 @@ class VMBootstrapSummary(nagiosplugin.Summary):
 
 
 @nagiosplugin.guarded
-def check_vm_bootstrap():
+def check_nagios_directory_sync():
     """Check that all virtual machines listed in our CMDB (the Directory) are
     present in Nagios. This is done to verify correct VM bootstrap behavior."""
 
