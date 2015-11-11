@@ -1,11 +1,12 @@
 Changelog
 =========
 
-1.7.6 (unreleased)
+1.7.6 (2015-11-11)
 ------------------
 
 - Improve handling of deleted VMs in both bacula and backy configuration scripts
   (#13456)
+- Add check for incompletely bootstrapped VMs (#18600)
 
 
 1.7.5 (2015-11-06)
