@@ -128,7 +128,7 @@ class BackyConfig(object):
     def purge(self):
         """Removes job directories for nodes that are marked for deletion."""
         for name, node in self.deletions.items():
-            if 'hard' not in node['stages']:
+            if 'purge' not in node['stages']:
                 continue
             node_dir = self.prefix + p.join(BASEDIR, name)
             if p.exists(node_dir):

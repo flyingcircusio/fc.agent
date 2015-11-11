@@ -4,7 +4,8 @@ Changelog
 1.7.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Improve handling of deleted VMs in both bacula and backy configuration scripts
+  (#13456)
 
 
 1.7.5 (2015-11-06)

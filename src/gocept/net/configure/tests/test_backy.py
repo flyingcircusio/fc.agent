@@ -83,10 +83,10 @@ def test_backy_remove_deleted_nodes(backyenv, enc):
 
     configure()
 
-    assert     p.exists(str(prefix / 'srv/backy/node00'))
-    assert     p.exists(str(prefix / 'srv/backy/node01'))
-    assert     p.exists(str(prefix / 'srv/backy/node02'))
-    assert not p.exists(str(prefix / 'srv/backy/node03'))
+    assert p.exists(str(prefix / 'srv/backy/node00'))
+    assert p.exists(str(prefix / 'srv/backy/node01'))
+    assert p.exists(str(prefix / 'srv/backy/node02'))
+    assert p.exists(str(prefix / 'srv/backy/node03'))
     assert not p.exists(str(prefix / 'srv/backy/node04'))
 
 

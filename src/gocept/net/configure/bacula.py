@@ -41,19 +41,6 @@ class BaculaState(object):
                     _log.info('deleting stale stamp file %s', fullname)
                     self.unlink(fullname)
 
-    def purge_clients(self, expected):
-        for fn in os.listdir(self.CLIENTDIR):
-            fullname = p.join(self.CLIENTDIR, fn)
-            # unconditionally remove old format configs
-            if fn.startswith('job.') and fn.endswith('.conf'):
-                _log.info('deleting old-format client config %s', fullname)
-                self.unlink(fullname)
-            elif fn.endswith('.conf'):
-                candidate = fn.rsplit('.', 1)[0]
-                if candidate not in expected:
-                    _log.info('deleting stale client config %s', fullname)
-                    self.unlink(fullname)
-
 
 def purge():
     a = argparse.ArgumentParser(description=__doc__)
@@ -63,4 +50,3 @@ def purge():
     bacula = BaculaState(args.dry_run)
     expected = expected_nodes()
     bacula.purge_stamps(expected)
-    bacula.purge_clients(expected)

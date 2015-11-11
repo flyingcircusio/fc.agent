@@ -31,13 +31,3 @@ def test_purge_stamps(bacula_dir):
     BaculaState().purge_stamps(set(['node00', 'node01']))
     assert set(['Backup-node01', 'somethingelse']) == set(os.listdir(str(
         bacula_dir / 'stamps/Full')))
-
-
-def test_purge_clients(bacula_dir):
-    touch(bacula_dir, 'clients/patty.conf')         # keep
-    touch(bacula_dir, 'clients/job.patty.conf')     # old format, delete
-    touch(bacula_dir, 'clients/quimby.conf')        # delete
-    touch(bacula_dir, 'clients/README')             # don't touch
-    BaculaState().purge_clients(set(['patty']))
-    assert set(['patty.conf', 'README']) == set(os.listdir(str(
-        bacula_dir / 'clients')))
