@@ -25,7 +25,6 @@ system configuration.
         'PyYaml',
         'configobj>=4.7',
         'iso8601>=0.1.4',
-        'nagiosplugin',
         'netaddr>=0.7',
         'python-ldap',
         'pytz',
@@ -35,7 +34,6 @@ system configuration.
     ],
     entry_points={
         'console_scripts': [
-            'check-nagios-directory-sync = gocept.net.nagios:check_nagios_directory_sync',
             'list-maintenance = gocept.net.maintenance.script:list',
             'localconfig-backy = gocept.net.configure.backy:configure',
             'localconfig-bacula-purge = gocept.net.configure.bacula:purge',
