@@ -13,8 +13,18 @@ log = logging.getLogger('nagiosplugin')
 
 class VMBootstrap(nagiosplugin.Resource):
 
+    MONITORED_PROFILES = (
+        'backup',
+        'generic',
+        'kvm',
+        'storage',
+        'switch',
+        'router',
+    )
+
     def __init__(self, nagios_path, grace_period):
-        self.vm_bootstraps_failed = []
+        self.nodes_only_known_to_directory = []
+        self.nodes_only_known_to_nagios = []
         self.nagios_path = nagios_path
         self.grace_period = grace_period  # in minutes
 
@@ -44,7 +54,7 @@ class VMBootstrap(nagiosplugin.Resource):
             node['name'] for node in nodes
             if node['parameters']['servicing']
             if node['parameters'].get('online', True)
-            if node['parameters']['profile'] == 'generic'
+            if node['parameters']['profile'] in self.MONITORED_PROFILES
             if (iso8601.parse_date(node['parameters']['creation_date'])
                 < reference_date)]
 
@@ -71,30 +81,36 @@ class VMBootstrap(nagiosplugin.Resource):
         are present in Directory but not in Nagios.
         """
 
-        nodes_directory_knows = self.nodes_directory_knows()
-        nodes_nagios_knows = self.nodes_nagios_knows()
+        nodes_directory_knows = set(self.nodes_directory_knows())
+        nodes_nagios_knows = set(self.nodes_nagios_knows())
 
-        for vm_probe in nodes_directory_knows:
-            if vm_probe not in nodes_nagios_knows:
-                log.info('%s failed to bootstrap.', vm_probe)
-                self.vm_bootstraps_failed.append(vm_probe)
+        self.nodes_only_known_to_directory = sorted(
+            nodes_directory_knows - nodes_nagios_knows)
+        self. nodes_only_known_to_nagios = sorted(
+            nodes_nagios_knows - nodes_directory_knows)
 
-        self.vm_bootstraps_failed.sort()
-
-        return [nagiosplugin.Metric('vm_bootstraps_failed',
-                                    len(self.vm_bootstraps_failed), min=0,
-                                    context='vmbootstrap')]
+        return [
+            nagiosplugin.Metric(
+                'nodes_only_known_to_directory',
+                len(self.nodes_only_known_to_directory), min=0,
+                context='vmbootstrap'),
+            nagiosplugin.Metric(
+                'nodes_only_known_to_nagios',
+                len(self.nodes_only_known_to_nagios), min=0,
+                context='vmbootstrap')]
 
 
 class VMBootstrapSummary(nagiosplugin.Summary):
 
     def ok(self, results):
-        return 'All VMs have been bootstrapped.'
+        return 'Directory and Nagios are in sync.'
 
     def problem(self, results):
         resource = results.first_significant.resource
-        return 'Failed VM bootstraps: {}'.format(
-            ' '.join(resource.vm_bootstraps_failed))
+        return ('Directory and Nagios are out of sync: Nagios>{}; Directory>{}'
+                .format(
+                    ' '.join(resource.nodes_only_known_to_nagios),
+                    ' '.join(resource.nodes_only_known_to_directory)))
 
 
 @nagiosplugin.guarded
