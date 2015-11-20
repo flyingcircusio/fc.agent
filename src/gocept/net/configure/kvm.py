@@ -17,7 +17,11 @@ VERBOSE = os.environ.get('VERBOSE', False)
 
 
 class VM(object):
-    """Minimal VM abstraction to support config cleanup testing."""
+    """Minimal VM abstraction to support config cleanup testing.
+
+    Calls to fc-qemu are set up in such a way that stdout/stderr goes
+    into /var/log/fc-qemu.log
+    """
 
     root = ''  # support testing
     configfile = '{root}/etc/qemu/vm/{name}.cfg'
@@ -33,6 +37,14 @@ class VM(object):
                 print('cleaning {}'.format(self.cfg))
             os.unlink(self.cfg)
 
+    def ensure(self):
+        """Check single VM"""
+        cmd = ['fc-qemu', 'ensure', self.cfg]
+        if VERBOSE:
+            cmd[1:1] = ['-v']
+            print('calling: ' + ' '.join(cmd))
+        subprocess.check_call(cmd, close_fds=True)
+
 
 def delete_configs():
     """Prune VM configs for deleted VMs."""
@@ -44,25 +56,17 @@ def delete_configs():
             VM(name).unlink()
 
 
-def ensure_vm(cfg):
-    """Check single VM (presumably in separate process)"""
-    cmd = ['fc-qemu', 'ensure', cfg]
-    if VERBOSE:
-        cmd[1:1] = ['-v']
-        print('calling: ' + ' '.join(cmd))
-    subprocess.check_call(cmd)
-
-
 def ensure_vms():
     """Scrub VM status periodically"""
     procs = []
-    for vm in glob.glob('/etc/qemu/vm/*.cfg'):
-        proc = multiprocessing.Process(target=ensure_vm, name=vm, args=(vm,))
+    for cfg in glob.glob('/etc/qemu/vm/*.cfg'):
+        vm = VM(os.path.basename(cfg).rsplit('.', 1)[0])
+        proc = multiprocessing.Process(target=vm.ensure, name=vm.name)
         procs.append(proc)
         proc.start()
         time.sleep(0.1)
     for p in procs:
-        p.join(3600)
+        p.join(4 * 3600)
     exitcodes = [p.exitcode for p in procs] or (0,)
 
     # Normally VMs should have been shut down already when we delete the config
