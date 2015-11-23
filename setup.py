@@ -35,7 +35,8 @@ system configuration.
     ],
     entry_points={
         'console_scripts': [
-            'check-nagios-directory-sync = gocept.net.nagios:check_nagios_directory_sync',
+            'check-nagios-directory-sync'
+            ' = gocept.net.nagios:check_nagios_directory_sync',
             'list-maintenance = gocept.net.maintenance.script:list',
             'localconfig-backy = gocept.net.configure.backy:configure',
             'localconfig-bacula-purge = gocept.net.configure.bacula:purge',
@@ -43,19 +44,26 @@ system configuration.
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
             'localconfig-ceph-pools = gocept.net.configure.ceph:pools',
-            'localconfig-ceph-purge-volumes = gocept.net.configure.ceph:purge_volumes',
+            'localconfig-ceph-purge-volumes'
+            ' = gocept.net.configure.ceph:purge_volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
-            'localconfig-iptables-inputrules = gocept.net.configure.iptables:inputrules',
+            'localconfig-iptables-inputrules'
+            ' = gocept.net.configure.iptables:inputrules',
             'localconfig-kibana = gocept.net.configure.kibana:main',
             'localconfig-kvm-init = gocept.net.configure.kvm:ensure_vms',
             'localconfig-nagios-nodes = gocept.net.configure.nagios:nodes',
-            'localconfig-nagioscontacts = gocept.net.configure.nagios:contacts',
-            'localconfig-postfix-master = gocept.net.configure.postfix:master',
-            'localconfig-puppetmaster = gocept.net.configure.puppetmaster:main',
-            'localconfig-resize2fs-vmroot = gocept.net.configure.resize2fs:check_grow',
+            'localconfig-nagioscontacts'
+            ' = gocept.net.configure.nagios:contacts',
+            'localconfig-postfix-master = '
+            'gocept.net.configure.postfix:master',
+            'localconfig-puppetmaster'
+            '= gocept.net.configure.puppetmaster:main',
+            'localconfig-resize2fs-vmroot'
+            '= gocept.net.configure.resize2fs:check_grow',
             'localconfig-users = gocept.net.configure.users:main',
             'localconfig-zones = gocept.net.configure.zones:update',
-            'rbd-clean-old-snapshots = gocept.net.ceph.utils:clean_old_snapshots',
+            'rbd-clean-old-snapshots '
+            '= gocept.net.ceph.utils:clean_old_snapshots',
             'rbd-images = gocept.net.ceph.utils:list_images',
             'request-maintenance = gocept.net.maintenance.script:request',
             'run-maintenance = gocept.net.maintenance.script:run',

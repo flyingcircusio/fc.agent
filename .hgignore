@@ -16,3 +16,4 @@ tags
 pip-selfcheck.json
 htmlcov
 .coverage
+.cache
