@@ -162,15 +162,10 @@ class Pool(object):
                 'pool', 'set', self.name, 'pgp_num', str(value)],
                 accept_failure=True)
             if returncode == 0:
-                break
-            elif returncode == 11:  # EAGAIN
-                retry += 1
-                continue
-            raise RuntimeError('failed to set pgp_num for {} to {}'.format(
-                self.name, value), out, err, returncode)
-        if retry >= max_retries:
-            raise RuntimeError('max retries exceeded while setting pgp_num')
-        self._pgp_num = int(value)
+                self._pgp_num = int(value)
+                return
+            retry += 1
+        raise RuntimeError('max retries exceeded while setting pgp_num')
 
     @property
     def size_total_gb(self):
