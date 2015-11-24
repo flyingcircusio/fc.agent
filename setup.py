@@ -27,6 +27,7 @@ system configuration.
         'iso8601>=0.1.4',
         'nagiosplugin',
         'netaddr>=0.7',
+        'pytest',
         'python-ldap',
         'pytz',
         'requests>=2.3',
@@ -43,9 +44,7 @@ system configuration.
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
-            'localconfig-ceph-pools = gocept.net.configure.ceph:pools',
-            'localconfig-ceph-purge-volumes'
-            ' = gocept.net.configure.ceph:purge_volumes',
+            'localconfig-ceph-volumes = gocept.net.configure.ceph:volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
             'localconfig-iptables-inputrules'
             ' = gocept.net.configure.iptables:inputrules',

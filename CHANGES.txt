@@ -4,7 +4,11 @@ Changelog
 1.7.8 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Ceph RBD volumes are now deleted when a VM enters 'hard' deletion state
+  (#19129).
+- Fold `localconfig-ceph-pools` and `localconfig-ceph-purge-volumes` into
+  `localconfig-ceph-volumes` (#19129).
+- Reenable check_nagios_directory_sync (#18598).
 
 
 1.7.6 (2015-11-11)
@@ -212,3 +216,6 @@ Changelog
 
 * Extract computation of tmp and swap volumes from init script so we can test
   them and make them more robust for migration.
+
+
+.. vim: set ft=rst:
