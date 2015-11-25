@@ -24,7 +24,7 @@ system configuration.
     install_requires=[
         'PyYaml',
         'configobj>=4.7',
-        'iso8601>=0.1.4',
+        'iso8601==0.1.10',
         'nagiosplugin',
         'netaddr>=0.7',
         'pytest',
