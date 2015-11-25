@@ -48,7 +48,7 @@ class VMBootstrap(nagiosplugin.Resource):
         directory = gocept.net.directory.Directory()
         this_node = directory.lookup_node(socket.gethostname())
         nodes = directory.list_nodes(this_node['parameters']['location'])
-        reference_date = (datetime.datetime.now(iso8601.UTC)
+        reference_date = (datetime.datetime.now(iso8601.iso8601.UTC)
                           - datetime.timedelta(minutes=self.grace_period))
         nodes_directory_knows = [
             node['name'] for node in nodes
