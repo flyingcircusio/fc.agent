@@ -169,7 +169,7 @@ class Pool(object):
 
     @property
     def size_total_gb(self):
-        return sum(i.size_gb for i in self.images)
+        return sum(i.size_gb for i in self.images if not i.snapshot)
 
     def snap_rm(self, rbdimage):
         self.cluster.rbd(['snap', 'rm', '{}/{}@{}'.format(

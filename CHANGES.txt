@@ -4,7 +4,8 @@ Changelog
 1.7.9 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Increase Ceph GiB/PG ratio to 16 (#18803).
+- Don't count snapshots for GiB/PG ratio calculation (#18803).
 
 
 1.7.8 (2015-11-25)

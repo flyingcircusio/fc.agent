@@ -111,8 +111,8 @@ def pg_num():
     p.add_argument('-n', '--dry-run', help='show what would be done only',
                    default=False, action='store_true')
     p.add_argument('-r', '--gb-per-pg', metavar='RATIO', type=float,
-                   default=8.0, help='Adjust pg_num so that there are at most '
-                   'RATIO GiB data per PG (default: %(default)s)')
+                   default=16.0, help='Adjust pg_num so that there are at most'
+                   ' RATIO GiB data per PG (default: %(default)s)')
     p.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
                    help='path to ceph.conf (default: %(default)s)')
     p.add_argument('-i', '--id', default='admin', metavar='USER',
