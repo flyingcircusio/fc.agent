@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.9 (unreleased)
+1.7.9 (2015-12-09)
 ------------------
 
 - Increase Ceph GiB/PG ratio to 16 (#18803).
