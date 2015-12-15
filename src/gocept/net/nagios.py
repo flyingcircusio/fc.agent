@@ -32,19 +32,6 @@ class VMBootstrap(nagiosplugin.Resource):
         """Returns a list of VMs that should be running in the current location
         according to the Directory (service status: "in service").
         """
-
-        """
-        Todo:
-            * Retrive nodes from directory that fullfil the following criteria:
-                * location: same as VM that this check is running on
-                * resource group: *
-                * profile: generic
-                * environment: *
-                * service status: in service
-                * creation date: <= "now" minus grace_period (see check args)
-        What is listed below is just a test. We actually use Nagios' list and
-        add a VM to it to trigger the check.
-        """
         directory = gocept.net.directory.Directory()
         this_node = directory.lookup_node(socket.gethostname())
         nodes = directory.list_nodes(this_node['parameters']['location'])
@@ -59,8 +46,6 @@ class VMBootstrap(nagiosplugin.Resource):
                 < reference_date)]
 
         nodes_directory_knows.sort()
-        # XXX There are nodes which are not managed by puppet. Thus they don't
-        # appear in Nagios. But in directory.
         log.debug('VMs that Directory knows: %s',
                   ' '.join(nodes_directory_knows))
         return nodes_directory_knows
