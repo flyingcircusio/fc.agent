@@ -5,6 +5,7 @@ import iso8601
 import logging
 import nagiosplugin
 import os
+import re
 import socket
 
 
@@ -20,13 +21,21 @@ class VMBootstrap(nagiosplugin.Resource):
         'storage',
         'switch',
         'router',
+        'wifi-ap',
     )
+    HOSTNAME_PATTERN = re.compile(r'host_name\s+([\w-]+)')
 
     def __init__(self, nagios_path, grace_period):
         self.nodes_only_known_to_directory = []
         self.nodes_only_known_to_nagios = []
         self.nagios_path = nagios_path
         self.grace_period = grace_period  # in minutes
+        try:
+            with open('/etc/nagios/sync_ignore') as f:
+                self.nagios_ignore = [line.strip() for line in f
+                                      if not line.startswith('#')]
+        except IOError:
+            self.nagios_ignore = []
 
     def nodes_directory_knows(self):
         """Returns a list of VMs that should be running in the current location
@@ -54,7 +63,14 @@ class VMBootstrap(nagiosplugin.Resource):
         """Returns a list of VMs that the Nagios installation on the current
         host knows (directory /etc/nagios/hosts/<vm> exists).
         """
-        nodes_nagios_knows = next(os.walk(self.nagios_path))[1]
+        nodes_nagios_knows = set()
+        with open('/var/nagios/objects.cache', 'r') as f:
+            for line in f:
+                m = self.HOSTNAME_PATTERN.search(line)
+                if m is not None:
+                    hostname = m.group(1)
+                    if hostname not in self.nagios_ignore:
+                        nodes_nagios_knows.add(hostname)
 
         log.debug('VMs that Nagios knows: %s',
                   ' '.join(nodes_nagios_knows))

@@ -4,8 +4,7 @@ Changelog
 1.7.10 (unreleased)
 -------------------
 
-- Nothing changed yet.
-
+- Improve monitoring of inconsitencies in monitoring (#19425)
 
 1.7.9 (2015-12-09)
 ------------------
