@@ -25,16 +25,15 @@ class VMBootstrap(nagiosplugin.Resource):
     )
     HOSTNAME_PATTERN = re.compile(r'host_name\s+([\w-]+)')
 
-    def __init__(self, nagios_path, grace_period):
+    def __init__(self, nagios_path, grace_period, nagios_ignore_file=None):
         self.nodes_only_known_to_directory = []
         self.nodes_only_known_to_nagios = []
         self.nagios_path = nagios_path
         self.grace_period = grace_period  # in minutes
-        try:
-            with open('/etc/nagios/sync_ignore') as f:
-                self.nagios_ignore = [line.strip() for line in f
-                                      if not line.startswith('#')]
-        except IOError:
+        if nagios_ignore_file:
+            self.nagios_ignore = [line.strip() for line in nagios_ignore_file
+                                  if not line.startswith('#')]
+        else:
             self.nagios_ignore = []
 
     def nodes_directory_knows(self):
@@ -138,9 +137,14 @@ def check_nagios_directory_sync():
                       help='increase output verbosity (use up to 3 times)')
     argp.add_argument('-t', '--timeout', default=30,
                       help='check execution timeout (default: %(default)s)')
+    argp.add_argument('-i', '--ignore', type=file,
+                      help='Path to file containing hosts to ignore from '
+                           'nagios.')
+
     args = argp.parse_args()
     check = nagiosplugin.Check(
-        VMBootstrap(args.nagios_path, args.grace_period),
+        VMBootstrap(args.nagios_path, args.grace_period,
+                    nagios_ignore_file=args.ignore),
         nagiosplugin.ScalarContext('vmbootstrap', args.warning, args.critical),
         VMBootstrapSummary())
     check.main(verbose=args.verbose, timeout=args.timeout)
