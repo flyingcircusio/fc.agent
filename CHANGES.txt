@@ -4,7 +4,7 @@ Changelog
 1.7.10 (unreleased)
 -------------------
 
-- Improve monitoring of inconsitencies in monitoring (#19425)
+- Improve directory/nagios consistency check (#19425).
 
 1.7.9 (2015-12-09)
 ------------------
