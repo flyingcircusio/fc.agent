@@ -42,24 +42,6 @@ class ResourcegroupPoolEquivalence(object):
             return
 
 
-def pools():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('-n', '--dry-run', help='show what would be done only',
-                   default=False, action='store_true')
-    p.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
-                   help='path to ceph.conf (default: %(default)s)')
-    p.add_argument('-i', '--id', default='admin', metavar='USER',
-                   help='rados user (without the "client." prefix) to '
-                   'authenticate as (default: %(default)s)')
-    p.add_argument('LOCATION', help='location id (e.g., "dev")')
-    args = p.parse_args()
-    ceph = Cluster(args.conf, args.id, args.dry_run)
-    with gocept.net.directory.exceptions_screened():
-        rpe = ResourcegroupPoolEquivalence(
-            gocept.net.directory.Directory(), ceph, args.LOCATION)
-        rpe.ensure()
-
-
 class PgNumPolicy(object):
     """The number of PGs per pool must scale with the amount of data.
 
@@ -129,8 +111,8 @@ def pg_num():
     p.add_argument('-n', '--dry-run', help='show what would be done only',
                    default=False, action='store_true')
     p.add_argument('-r', '--gb-per-pg', metavar='RATIO', type=float,
-                   default=8.0, help='Adjust pg_num so that there are at most '
-                   'RATIO GiB data per PG (default: %(default)s)')
+                   default=16.0, help='Adjust pg_num so that there are at most'
+                   ' RATIO GiB data per PG (default: %(default)s)')
     p.add_argument('-c', '--conf', default='/etc/ceph/ceph.conf',
                    help='path to ceph.conf (default: %(default)s)')
     p.add_argument('-i', '--id', default='admin', metavar='USER',
@@ -146,8 +128,7 @@ class VolumeDeletions(object):
 
     def __init__(self, directory, cluster):
         self.directory = directory
-        self.cluster = cluster
-        self.pools = Pools(self.cluster)
+        self.pools = Pools(cluster)
 
     def ensure(self):
         deletions = self.directory.deletions('vm')
@@ -160,7 +141,7 @@ class VolumeDeletions(object):
             except KeyError:
                 # The pool doesn't exist. Ignore. Nothing to delete anyway.
                 continue
-            if 'purge' in node['stages']:
+            if 'hard' in node['stages']:
                 for image in ['{}.root', '{}.swap', '{}.tmp']:
                     image = image.format(name)
                     base_image = None
@@ -179,7 +160,7 @@ class VolumeDeletions(object):
                     pool.image_rm(base_image)
 
 
-def purge_volumes():
+def volumes():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('-n', '--dry-run', help='show what would be done only',
                    default=False, action='store_true')
@@ -188,8 +169,13 @@ def purge_volumes():
     p.add_argument('-i', '--id', default='admin', metavar='USER',
                    help='rados user (without the "client." prefix) to '
                    'authenticate as (default: %(default)s)')
+    p.add_argument('location', metavar='LOCATION',
+                   help='location id (e.g., "dev")')
     args = p.parse_args()
     ceph = Cluster(args.conf, args.id, args.dry_run)
     with gocept.net.directory.exceptions_screened():
         volumes = VolumeDeletions(gocept.net.directory.Directory(), ceph)
         volumes.ensure()
+        rpe = ResourcegroupPoolEquivalence(
+            gocept.net.directory.Directory(), ceph, args.location)
+        rpe.ensure()

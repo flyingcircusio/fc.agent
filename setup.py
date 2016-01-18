@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='fc.agent',
-    version='1.7.3.dev0',
+    version='1.7.11.dev0',
     author='Flying Circus',
     author_email='mail@flyingcircus.io',
     url='http://bitbucket.org/flyingcircus/fc.agent',
@@ -22,41 +22,51 @@ system configuration.
     license='BSD',
     namespace_packages=['gocept'],
     install_requires=[
+        'PyYaml',
         'configobj>=4.7',
-        'iso8601>=0.1.4',
+        'iso8601==0.1.10',
+        'nagiosplugin',
         'netaddr>=0.7',
+        'pytest',
         'python-ldap',
         'pytz',
-        'PyYaml',
         'requests>=2.3',
         'setuptools',
         'shortuuid>=0.4',
     ],
     entry_points={
         'console_scripts': [
+            'check-nagios-directory-sync'
+            ' = gocept.net.nagios:check_nagios_directory_sync',
             'list-maintenance = gocept.net.maintenance.script:list',
-            'localconfig-bacula-purge-stamps = gocept.net.configure.bacula:purge_stamps',
+            'localconfig-backy = gocept.net.configure.backy:configure',
+            'localconfig-bacula-purge = gocept.net.configure.bacula:purge',
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
-            'localconfig-ceph-pools = gocept.net.configure.ceph:pools',
-            'localconfig-ceph-purge-volumes = gocept.net.configure.ceph:purge_volumes',
+            'localconfig-ceph-volumes = gocept.net.configure.ceph:volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
-            'localconfig-iptables-inputrules = gocept.net.configure.iptables:inputrules',
+            'localconfig-iptables-inputrules'
+            ' = gocept.net.configure.iptables:inputrules',
             'localconfig-kibana = gocept.net.configure.kibana:main',
             'localconfig-kvm-init = gocept.net.configure.kvm:ensure_vms',
-            'localconfig-nagioscontacts = gocept.net.configure.nagios:contacts',
             'localconfig-nagios-nodes = gocept.net.configure.nagios:nodes',
-            'localconfig-postfix-master = gocept.net.configure.postfix:master',
-            'localconfig-puppetmaster = gocept.net.configure.puppetmaster:main',
-            'localconfig-resize2fs-vmroot = gocept.net.configure.resize2fs:check_grow',
+            'localconfig-nagioscontacts'
+            ' = gocept.net.configure.nagios:contacts',
+            'localconfig-postfix-master = '
+            'gocept.net.configure.postfix:master',
+            'localconfig-puppetmaster'
+            '= gocept.net.configure.puppetmaster:main',
+            'localconfig-resize2fs-vmroot'
+            '= gocept.net.configure.resize2fs:check_grow',
             'localconfig-users = gocept.net.configure.users:main',
             'localconfig-zones = gocept.net.configure.zones:update',
+            'rbd-clean-old-snapshots '
+            '= gocept.net.ceph.utils:clean_old_snapshots',
+            'rbd-images = gocept.net.ceph.utils:list_images',
             'request-maintenance = gocept.net.maintenance.script:request',
             'run-maintenance = gocept.net.maintenance.script:run',
             'schedule-maintenance = gocept.net.maintenance.script:schedule',
-            'rbd-images = gocept.net.ceph.utils:list_images',
-            'rbd-clean-old-snapshots = gocept.net.ceph.utils:clean_old_snapshots',
         ],
     },
 )

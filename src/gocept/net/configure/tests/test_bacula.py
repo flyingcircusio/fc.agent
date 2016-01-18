@@ -1,55 +1,33 @@
-import gocept.net.configure.bacula
-import glob
+from gocept.net.configure.bacula import BaculaState, expected_nodes
 import os
 import pytest
 
 
 @pytest.fixture
-def empty_config(tmpdir):
-    os.mkdir(str(tmpdir / 'etc'))
-    os.mkdir(str(tmpdir / 'etc/bacula/'))
-    os.mkdir(str(tmpdir / 'etc/bacula/clients/'))
-    os.mkdir(str(tmpdir / 'var'))
-    os.mkdir(str(tmpdir / 'var/lib'))
-    os.mkdir(str(tmpdir / 'var/lib/bacula'))
-    os.mkdir(str(tmpdir / 'var/lib/bacula/stamps'))
-    os.mkdir(str(tmpdir / 'var/lib/bacula/stamps/Full'))
-
-    gocept.net.configure.bacula.ROOT = str(tmpdir)
+def bacula_dir(tmpdir):
+    os.mkdir(str(tmpdir / 'stamps'))
+    os.mkdir(str(tmpdir / 'stamps/Full'))
+    os.mkdir(str(tmpdir / 'clients'))
+    BaculaState.STAMPDIR = str(tmpdir / 'stamps')
+    BaculaState.CLIENTDIR = str(tmpdir / 'clients')
     return tmpdir
 
 
-def test_delete_nodes(empty_config, tmpdir, capsys, monkeypatch, directory):
-    directory = directory()
-    directory.deletions.return_value = {
-        'node00': {'stages': []},
-        'node01': {'stages': ['prepare']},
-        'node02': {'stages': ['prepare', 'soft']},
-        'node03': {'stages': ['prepare', 'soft', 'hard']},
-        'node04': {'stages': ['prepare', 'soft', 'hard', 'purge']}}
+def touch(tmpdir, fn):
+    open(str(tmpdir / fn), 'a').close()
 
-    # Create config files for all nodes.
-    for node in directory.deletions():
-        for file in ['{}.conf', 'job.{}.conf']:
-            file = file.format(node)
-            with open(str(tmpdir / 'etc/bacula/clients' / file), 'w'):
-                pass
-        with open(str(tmpdir /
-                  'var/lib/bacula/stamps/Full/Backup-{}'.format(node)), 'w'):
-            pass
 
-    gocept.net.configure.bacula.purge_stamps()
+def test_expected_nodes(directory):
+    d = directory()
+    d.class_map.return_value = {'node00': {}, 'node01': {}}
+    assert (set(['node00', 'node01']) == expected_nodes())
 
-    remaining = glob.glob(str(tmpdir / 'etc/bacula/clients/*'))
-    remaining.extend(glob.glob(str(tmpdir /
-                                   'var/lib/bacula/stamps/*/Backup-*')))
-    remaining.sort()
-    remaining = [x.replace(str(tmpdir), '') for x in remaining]
-    assert ['/etc/bacula/clients/job.node00.conf',
-            '/etc/bacula/clients/job.node01.conf',
-            '/etc/bacula/clients/job.node02.conf',
-            '/etc/bacula/clients/node00.conf',
-            '/etc/bacula/clients/node01.conf',
-            '/etc/bacula/clients/node02.conf',
-            '/var/lib/bacula/stamps/Full/Backup-node00',
-            '/var/lib/bacula/stamps/Full/Backup-node01'] == remaining
+
+def test_purge_stamps(bacula_dir):
+    touch(bacula_dir, 'stamps/Full/Backup-node01')  # keep
+    touch(bacula_dir, 'stamps/Full/Backup-node02')  # delete
+    touch(bacula_dir, 'stamps/Full/somethingelse')  # don't touch
+
+    BaculaState().purge_stamps(set(['node00', 'node01']))
+    assert set(['Backup-node01', 'somethingelse']) == set(os.listdir(str(
+        bacula_dir / 'stamps/Full')))

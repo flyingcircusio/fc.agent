@@ -1,10 +1,63 @@
 Changelog
 =========
 
-1.7.3 (unreleased)
-------------------
+1.7.11 (unreleased)
+-------------------
 
 - Nothing changed yet.
+
+
+1.7.10 (2015-12-18)
+-------------------
+
+- Improve directory/nagios consistency check (#19425).
+
+1.7.9 (2015-12-09)
+------------------
+
+- Increase Ceph GiB/PG ratio to 16 (#18803).
+- Don't count snapshots for GiB/PG ratio calculation (#18803).
+
+
+1.7.8 (2015-11-25)
+------------------
+
+- Ceph RBD volumes are now deleted when a VM enters 'hard' deletion state
+  (#19129).
+- Fold `localconfig-ceph-pools` and `localconfig-ceph-purge-volumes` into
+  `localconfig-ceph-volumes` (#19129).
+- Reenable check_nagios_directory_sync (#18598).
+
+
+1.7.6 (2015-11-11)
+------------------
+
+- Improve handling of deleted VMs in both bacula and backy configuration scripts
+  (#13456)
+- Add check for incompletely bootstrapped VMs (#18600)
+
+
+1.7.5 (2015-11-06)
+------------------
+
+- Omit deleted nodes from generated backy configuration (#13456).
+- Include explicit values for pool and image in generated backy configuration
+  (#13456).
+
+
+1.7.4 (2015-10-30)
+------------------
+
+- backy config: generate valid config file even when there are no jobs present
+  (#13456).
+- Generalize bacula purge code, rename localconfig-bacula-purge-stamps to
+  localconfig-bacula-purge (#13456).
+
+
+1.7.3 (2015-09-21)
+------------------
+
+- localconfig-backy writes backy.conf from directory ENC data (#13456).
 
 
 1.7.2 (2015-07-30)
@@ -181,3 +234,6 @@ Changelog
 
 * Extract computation of tmp and swap volumes from init script so we can test
   them and make them more robust for migration.
+
+
+.. vim: set ft=rst:

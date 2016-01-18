@@ -155,26 +155,21 @@ class Pool(object):
     @pgp_num.setter
     def pgp_num(self, value):
         retry = 0
-        max_retries = 30
+        max_retries = 40
         while retry < max_retries:
             time.sleep(min([30, 1.2 ** retry]))
             out, err, returncode = self.cluster.ceph_osd([
                 'pool', 'set', self.name, 'pgp_num', str(value)],
                 accept_failure=True)
             if returncode == 0:
-                break
-            elif returncode == 11:  # EAGAIN
-                retry += 1
-                continue
-            raise RuntimeError('failed to set pgp_num for {} to {}'.format(
-                self.name, value), out, err, returncode)
-        if retry >= max_retries:
-            raise RuntimeError('max retries exceeded while setting pgp_num')
-        self._pgp_num = int(value)
+                self._pgp_num = int(value)
+                return
+            retry += 1
+        raise RuntimeError('max retries exceeded while setting pgp_num')
 
     @property
     def size_total_gb(self):
-        return sum(i.size_gb for i in self.images)
+        return sum(i.size_gb for i in self.images if not i.snapshot)
 
     def snap_rm(self, rbdimage):
         self.cluster.rbd(['snap', 'rm', '{}/{}@{}'.format(

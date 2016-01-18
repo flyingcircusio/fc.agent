@@ -154,5 +154,15 @@ class TestPool(object):
         with pytest.raises(RuntimeError):
             Pool('test', cluster).pgp_num = 100
 
-    def test_total_size_gb(self, pools):
+    def test_total_size(self, pools):
+        assert 25 == pools['test'].size_total_gb
+
+    def test_total_size_should_exclude_snapshots(self, cluster, monkeypatch):
+        monkeypatch.setattr(Pool, '_rbd_query', lambda self: """\
+[{"image":"test04.root","size":21474836480,"format":1},
+ {"format":2,"image":"test03.root","size":10737418240,"protected":"false",\
+  "snapshot":"backy-ZEQmgR6PsqPyj6235sUBAK"},
+ {"image":"test04.tmp","size":5368709120,"format":2,"lock_type":"exclusive"}]
+""")
+        pools = Pools(cluster)
         assert 25 == pools['test'].size_total_gb
