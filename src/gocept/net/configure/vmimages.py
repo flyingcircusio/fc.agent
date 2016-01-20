@@ -96,7 +96,6 @@ class BaseImage(object):
         image_file = ''
         try:
             try:
-                logger.info('Checking for current release ...')
                 # The branch URL is expected to be a redirect to a specific
                 # release. This helps us to download atomic updates where Hydra
                 # finishing in the middle won't have race conditions with us
@@ -107,27 +106,24 @@ class BaseImage(object):
                 assert release.status_code in [301, 302], release.status_code
                 release_url = release.headers['Location']
                 release = os.path.basename(release_url)
-                print "Release:", release_url
+                logger.info("\t Release: {}".format(release_url))
                 url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
                 checksum = requests.get(url + '.sha256')
                 checksum.raise_for_status()
                 checksum = checksum.text.strip()
                 snapshot_name = 'base-{}'.format(release)
                 current_snapshots = self._snapshot_names(self.image)
-                logger.info('Existing snapshots :{}'.format(current_snapshots))
-                logger.info('Expecting snapshot: {}'.format(snapshot_name))
+                logger.info('\t Have releases: \n\t\t{}'.format(
+                    '\n\t\t'.join(current_snapshots)))
                 if snapshot_name in self._snapshot_names(self.image):
-                    logger.info('Found snapshot. Nothing to do.')
                     # All good. No need to update.
                     return
 
-                logger.info('Did not find snapshot. Updating.')
+                logger.info('\tDownloading release {} ...'.format(release))
                 # I tried doing this on the fly, but seeking to find the true
                 # size of the image is really slow. Also, we can verify the
                 # hash faster this way -- no need to write data into Ceph
                 # unnecessarily.
-                logger.info(
-                    'Downloading, uncompressing, and verifying integrity ...')
                 image_file, image_hash = download_and_uncompress_file(url)
 
                 # Verify content
@@ -137,7 +133,6 @@ class BaseImage(object):
                         "Aborting.".format(image_hash, checksum))
 
                 # Store in ceph
-                logger.info('Resizing ceph base image ...')
                 info = subprocess.check_output(
                     ['qemu-img', 'info', image_file])
                 for line in info.decode('ascii').splitlines():
@@ -149,7 +144,7 @@ class BaseImage(object):
                         break
                 self.image.resize(size)
 
-                logger.info('Storing into ceph ...')
+                logger.info('\tStoring release in Ceph RBD volume ...')
                 try:
                     target = subprocess.check_output(
                         ['rbd', '--id', CEPH_CLIENT, 'map',
@@ -166,7 +161,6 @@ class BaseImage(object):
                     subprocess.check_call(
                         ['rbd', '--id', CEPH_CLIENT, 'unmap', target])
                 # Create new snapshot and protect it so we can clone from it.
-                logger.info('Creating and protecting snapshot ...')
                 self.image.create_snap(snapshot_name)
                 self.image.protect_snap(snapshot_name)
             finally:
@@ -176,11 +170,11 @@ class BaseImage(object):
                 os.unlink(image_file)
 
     def flatten(self):
-        logger.info('Flattening ...')
         for snap in self.image.list_snaps():
             snap = rbd.Image(self.ioctx, self.branch, snap['name'])
             for child_pool, child_image in snap.list_children():
-                logger.info('Flattening {}/{}'.format(child_pool, child_image))
+                logger.info('\t Flattening {}/{}'.format(
+                    child_pool, child_image))
                 try:
                     pool = self.cluster.open_ioctx(child_pool)
                     image = rbd.Image(pool, child_image)
@@ -192,7 +186,6 @@ class BaseImage(object):
                     pool.close()
 
     def purge(self):
-        logger.info('Purging ...')
         # Delete old images, but keep the last three.
         #
         # Keeping a few is good because there may be race conditions that
@@ -213,7 +206,7 @@ class BaseImage(object):
         snaps = list(self.image.list_snaps())
         snaps.sort(key=lambda x: x['id'])
         for snap in snaps[:-3]:
-            logger.info('Purging old snapshot {}/{}@{}'.format(
+            logger.info('\tPurging snapshot {}/{}@{}'.format(
                 self.image_pool, self.branch, snap['name']))
             try:
                 self.image.unprotect_snap(snap['name'])
