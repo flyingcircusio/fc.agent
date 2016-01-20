@@ -60,6 +60,7 @@ system configuration.
             'localconfig-resize2fs-vmroot'
             '= gocept.net.configure.resize2fs:check_grow',
             'localconfig-users = gocept.net.configure.users:main',
+            'localconfig-vm-images = gocept.net.configure.vmimages:update',
             'localconfig-zones = gocept.net.configure.zones:update',
             'rbd-clean-old-snapshots '
             '= gocept.net.ceph.utils:clean_old_snapshots',

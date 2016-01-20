@@ -196,15 +196,23 @@ class BaseImage(object):
         # Delete old images, but keep the last three.
         #
         # Keeping a few is good because there may be race conditions that
-        # images are currently in use even after we called flatten. We expect
-        # all clients to always use the newest one, so if we do not purge all
-        # but keep a few then older ones should be reliably flattened by now.
+        # images are currently in use even after we called flatten. (This
+        # is what unprotect does, but there is no way to run flatten/unprotect
+        # in an atomic fashion. However, we expect all clients to always use
+        # the newest one. So, the race condition that remains is that we just
+        # downloaded a new image and someone else created a VM while we added
+        # it and didn't see the new snapshot, but we already were done
+        # flattening. Keeping 3 should be more than sufficient.
         #
-        # Note: images may not be flattened yet, even when we tried earlier
-        # and we then just give up (for now).
+        # If the ones we want to purge won't work, then we just ignore that
+        # for now.
+        #
+        # The CLI returns snapshots in their ID order (which appears to be
+        # guaranteed to increase) but the API isn't documented. Lets order
+        # them ourselves to ensure reliability.
         snaps = list(self.image.list_snaps())
         snaps.sort(key=lambda x: x['id'])
-        for snap in snaps[:-1]:
+        for snap in snaps[:-3]:
             logger.info('Purging old snapshot {}/{}@{}'.format(
                 self.image_pool, self.branch, snap['name']))
             try:
@@ -214,11 +222,8 @@ class BaseImage(object):
                 logger.exception('Error trying to purge snapshot:')
 
 
-FORMAT = '%(asctime)-15s %(message)s'
-
-
-def main():
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
+def update():
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     logging.getLogger("requests").setLevel(logging.WARNING)
 
     for branch in ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']:
@@ -229,12 +234,9 @@ def main():
                 image.flatten()
                 image.purge()
         except LockingError:
-            # This is expected and should be silent.
+            # This is expected and should be silent. Someone else is updating
+            # this branch at the moment.
             pass
         except Exception:
             logger.exception(
                 "An error occured while updating branch `{}`".format(branch))
-
-
-if __name__ == '__main__':
-    main()
