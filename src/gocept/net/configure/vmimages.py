@@ -42,7 +42,7 @@ def download_and_uncompress_file(url):
 class BaseImage(object):
 
     hydra_branch_url = 'https://hydra.flyingcircus.io/channels/branches/{}'
-    image_pool = 'services'
+    image_pool = 'rbd'
 
     def __init__(self, branch):
         self.branch = branch
@@ -208,6 +208,7 @@ class BaseImage(object):
             logger.info('Purging old snapshot {}/{}@{}'.format(
                 self.image_pool, self.branch, snap['name']))
             try:
+                self.image.unprotect_snap(snap['name'])
                 self.image.remove_snap(snap['name'])
             except:
                 logger.exception('Error trying to purge snapshot:')

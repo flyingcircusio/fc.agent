@@ -4,7 +4,9 @@ Changelog
 1.7.11 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Introduce base image management: clone VM images for our branches
+  (dev, staging, production) into Ceph's 'rbd' pool to use for cloning
+  new VMs.
 
 
 1.7.10 (2015-12-18)
