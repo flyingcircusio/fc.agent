@@ -27,7 +27,7 @@ def download_and_uncompress_file(url):
     with open(local_filename, 'wb') as f:
         for bz2chunk in r.iter_content(chunk_size=64 * 1024):
             if not bz2chunk:
-                # filter out keep-alive new chunks
+                # filter out keep-alive chunk borders
                 continue
             sha256.update(bz2chunk)
             try:
