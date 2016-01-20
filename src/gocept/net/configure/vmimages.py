@@ -106,14 +106,14 @@ class BaseImage(object):
                 assert release.status_code in [301, 302], release.status_code
                 release_url = release.headers['Location']
                 release = os.path.basename(release_url)
-                logger.info("\t Release: {}".format(release_url))
+                logger.info("\tRelease: {}".format(release_url))
                 url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
                 checksum = requests.get(url + '.sha256')
                 checksum.raise_for_status()
                 checksum = checksum.text.strip()
                 snapshot_name = 'base-{}'.format(release)
                 current_snapshots = self._snapshot_names(self.image)
-                logger.info('\t Have releases: \n\t\t{}'.format(
+                logger.info('\tHave releases: \n\t\t{}'.format(
                     '\n\t\t'.join(current_snapshots)))
                 if snapshot_name in self._snapshot_names(self.image):
                     # All good. No need to update.
@@ -173,7 +173,7 @@ class BaseImage(object):
         for snap in self.image.list_snaps():
             snap = rbd.Image(self.ioctx, self.branch, snap['name'])
             for child_pool, child_image in snap.list_children():
-                logger.info('\t Flattening {}/{}'.format(
+                logger.info('\tFlattening {}/{}'.format(
                     child_pool, child_image))
                 try:
                     pool = self.cluster.open_ioctx(child_pool)
