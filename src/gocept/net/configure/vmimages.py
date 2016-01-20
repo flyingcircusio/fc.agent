@@ -106,7 +106,7 @@ class BaseImage(object):
                 assert release.status_code in [301, 302], release.status_code
                 release_url = release.headers['Location']
                 release = os.path.basename(release_url)
-                logger.info("\tRelease: {}".format(release_url))
+                logger.info("\tRelease: {}".format(release))
                 url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
                 checksum = requests.get(url + '.sha256')
                 checksum.raise_for_status()
