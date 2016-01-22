@@ -43,6 +43,7 @@ class BaseImage(object):
 
     hydra_branch_url = 'https://hydra.flyingcircus.io/channels/branches/{}'
     image_pool = 'rbd'
+    image_file = None
 
     def __init__(self, branch):
         self.branch = branch
@@ -79,6 +80,17 @@ class BaseImage(object):
 
     def __exit__(self, *args, **kw):
         try:
+            if os.path.exists(self.image_file):
+                os.unlink(self.image_file)
+        except:
+            pass
+
+        try:
+            self.image.unlock('update')
+        except Exception:
+            pass
+
+        try:
             self.image.close()
         except Exception:
             pass
@@ -92,82 +104,86 @@ class BaseImage(object):
     def _snapshot_names(self, image):
         return [x['name'] for x in image.list_snaps()]
 
-    def update(self):
-        image_file = ''
+    def current_release(self):
+        """Get release identifier and URL to channel downloads."""
+        # The branch URL is expected to be a redirect to a specific
+        # release. This helps us to download atomic updates where Hydra
+        # finishing in the middle won't have race conditions with us
+        # sending multiple requests.
+        release = requests.get(
+            self.hydra_branch_url.format(self.branch),
+            allow_redirects=False)
+        assert release.status_code in [301, 302], release.status_code
+        release_url = release.headers['Location']
+        release_id = os.path.basename(release_url)
+        return release_id, release_url
+
+    def download_image(self, release_url):
+        image_url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
+        self.image_file, image_hash = download_and_uncompress_file(image_url)
+        checksum = requests.get(image_url + '.sha256')
+        checksum.raise_for_status()
+        checksum = checksum.text.strip()
+        if image_hash != checksum:
+            raise ValueError(
+                "Image had checksum {} but expected {}. "
+                "Aborting.".format(image_hash, checksum))
+
+    def store_in_ceph(self):
+        # Expects self.image_file to have been downloaded and verified.
+
+        # Resize the Ceph image
+        info = subprocess.check_output(
+            ['qemu-img', 'info', self.image_file])
+        for line in info.decode('ascii').splitlines():
+            line = line.strip()
+            if line.startswith('virtual size:'):
+                size = line.split()[3]
+                assert size.startswith('(')
+                size = int(size[1:])
+                break
+        self.image.resize(size)
+
+        # Update image data.
+        # qemu-img can convert directly to rbd, however, this
+        # doesn't work under some circumstances, like the image
+        # already existing, which is why we choose to map and use
+        # the raw converter.
         try:
-            try:
-                # The branch URL is expected to be a redirect to a specific
-                # release. This helps us to download atomic updates where Hydra
-                # finishing in the middle won't have race conditions with us
-                # sending multiple requests.
-                release = requests.get(
-                    self.hydra_branch_url.format(self.branch),
-                    allow_redirects=False)
-                assert release.status_code in [301, 302], release.status_code
-                release_url = release.headers['Location']
-                release = os.path.basename(release_url)
-                logger.info("\tRelease: {}".format(release))
-                url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
-                checksum = requests.get(url + '.sha256')
-                checksum.raise_for_status()
-                checksum = checksum.text.strip()
-                snapshot_name = 'base-{}'.format(release)
-                current_snapshots = self._snapshot_names(self.image)
-                logger.info('\tHave releases: \n\t\t{}'.format(
-                    '\n\t\t'.join(current_snapshots)))
-                if snapshot_name in self._snapshot_names(self.image):
-                    # All good. No need to update.
-                    return
-
-                logger.info('\tDownloading release {} ...'.format(release))
-                # I tried doing this on the fly, but seeking to find the true
-                # size of the image is really slow. Also, we can verify the
-                # hash faster this way -- no need to write data into Ceph
-                # unnecessarily.
-                image_file, image_hash = download_and_uncompress_file(url)
-
-                # Verify content
-                if image_hash != checksum:
-                    raise ValueError(
-                        "Image had checksum {} but expected {}. "
-                        "Aborting.".format(image_hash, checksum))
-
-                # Store in ceph
-                info = subprocess.check_output(
-                    ['qemu-img', 'info', image_file])
-                for line in info.decode('ascii').splitlines():
-                    line = line.strip()
-                    if line.startswith('virtual size:'):
-                        size = line.split()[3]
-                        assert size.startswith('(')
-                        size = int(size[1:])
-                        break
-                self.image.resize(size)
-
-                logger.info('\tStoring release in Ceph RBD volume ...')
-                try:
-                    target = subprocess.check_output(
-                        ['rbd', '--id', CEPH_CLIENT, 'map',
-                         '{}/{}'.format(self.image_pool, self.branch)])
-                    target = target.strip()
-                    # qemu-img can convert directly to rbd, however, this
-                    # doesn't work under some circumstances, like the image
-                    # already existing, which is why we choose to map and use
-                    # the raw converter.
-                    subprocess.check_call(
-                        ['qemu-img', 'convert', '-n', '-f', 'qcow2',
-                         image_file, '-O', 'raw', target])
-                finally:
-                    subprocess.check_call(
-                        ['rbd', '--id', CEPH_CLIENT, 'unmap', target])
-                # Create new snapshot and protect it so we can clone from it.
-                self.image.create_snap(snapshot_name)
-                self.image.protect_snap(snapshot_name)
-            finally:
-                self.image.unlock('update')
+            target = subprocess.check_output(
+                ['rbd', '--id', CEPH_CLIENT, 'map',
+                 '{}/{}'.format(self.image_pool, self.branch)])
+            target = target.strip()
+            subprocess.check_call(
+                ['qemu-img', 'convert', '-n', '-f', 'qcow2',
+                 self.image_file, '-O', 'raw', target])
         finally:
-            if os.path.exists(image_file):
-                os.unlink(image_file)
+            subprocess.check_call(
+                ['rbd', '--id', CEPH_CLIENT, 'unmap', target])
+
+    def update(self):
+        release, release_url = self.current_release()
+        logger.info("\tRelease: {}".format(release))
+
+        # Check whether the expected snapshot already exists.
+        snapshot_name = 'base-{}'.format(release)
+        current_snapshots = self._snapshot_names(self.image)
+        logger.info('\tHave releases: \n\t\t{}'.format(
+            '\n\t\t'.join(current_snapshots)))
+        if snapshot_name in self._snapshot_names(self.image):
+            # All good. No need to update.
+            return
+
+        logger.info('\tDownloading release {} ...'.format(release))
+        self.download_image(release_url)
+
+        # Store in ceph
+        logger.info('\tStoring release in Ceph RBD volume ...')
+        self.store_in_ceph()
+
+        # Create new snapshot and protect it so we can clone from it.
+        self.image.create_snap(snapshot_name)
+        self.image.protect_snap(snapshot_name)
 
     def flatten(self):
         for snap in self.image.list_snaps():
@@ -218,18 +234,18 @@ class BaseImage(object):
 def update():
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     logging.getLogger("requests").setLevel(logging.WARNING)
-
-    for branch in ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']:
-        logger.info('Updating branch {}'.format(branch))
-        try:
+    try:
+        for branch in ['fc-15.09-dev', 'fc-15.09-staging',
+                       'fc-15.09-production']:
+            logger.info('Updating branch {}'.format(branch))
             with BaseImage(branch) as image:
                 image.update()
                 image.flatten()
                 image.purge()
-        except LockingError:
-            # This is expected and should be silent. Someone else is updating
-            # this branch at the moment.
-            pass
-        except Exception:
-            logger.exception(
-                "An error occured while updating branch `{}`".format(branch))
+    except LockingError:
+        # This is expected and should be silent. Someone else is updating
+        # this branch at the moment.
+        pass
+    except Exception:
+        logger.exception(
+            "An error occured while updating branch `{}`".format(branch))
