@@ -50,6 +50,8 @@ class VMBootstrap(nagiosplugin.Resource):
             if node['parameters']['servicing']
             if node['parameters'].get('online', True)
             if node['parameters']['profile'] in self.MONITORED_PROFILES
+            # Ignore nixos:
+            if not node['parameters']['environment'].startswith('fc-')
             if (iso8601.parse_date(node['parameters']['creation_date'])
                 < reference_date)]
 

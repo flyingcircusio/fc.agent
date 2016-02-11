@@ -4,8 +4,7 @@ Changelog
 1.8.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Ignore NixOS VMs in nagios consistency check (#19851)
 
 1.8.1 (2016-01-20)
 ------------------
