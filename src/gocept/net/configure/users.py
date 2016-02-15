@@ -83,6 +83,17 @@ class UserConfig(object):
             self.ensure_homedir(user)
             self.ensure_ssh(user)
             self.ensure_permissions(user)
+        # Delete unknown users in directory range.
+        known_uids = [
+            user['uid']
+            for user in self.users]
+        for user in self.etcpasswd.records[:]:
+            if 1000 <= int(user.uid) <= 64999:
+                if user.login_name not in known_uids:
+                    self.etcpasswd.records.remove(user)
+                    user_shadow = self.etcshadow.get(user.login_name)
+                    self.etcshadow.records.remove(user_shadow)
+                    self.ensure_permissions_for_user_name(user.login_name, [])
 
     def ensure_user(self, user):
         # XXX re-implement user deletion based on deletion timestamp
@@ -144,16 +155,18 @@ class UserConfig(object):
 
     def ensure_permissions(self, user):
         granted_permissions = user['permissions'][self.resource_group]
+        self.ensure_permissions_for_user_name(user['uid'], granted_permissions)
 
+    def ensure_permissions_for_user_name(self, user_name, granted_permissions):
         for permission in self.permissions + [self.admins_permission]:
             group = self.etcgrp.get(permission['name'])
             members = set(group.members.split(','))
             if (permission['name'] in granted_permissions and
-                    user['uid'] not in members):
-                members.add(user['uid'])
+                    user_name not in members):
+                members.add(user_name)
             if (permission['name'] not in granted_permissions and
-                    user['uid'] in members):
-                members.remove(user['uid'])
+                    user_name in members):
+                members.remove(user_name)
             group.members = ''
             group.add_members(*members)
 
