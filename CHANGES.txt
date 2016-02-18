@@ -6,7 +6,7 @@ Changelog
 
 - Reliably remove users from VMs (#20092)
 
-- Ignore NixOS VMs in nagios consistency check (#19851)
+- Move nagios consistency check to fc.platform (#19851)
 
 1.8.1 (2016-01-20)
 ------------------
