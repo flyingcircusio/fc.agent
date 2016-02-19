@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='fc.agent',
-    version='1.8.2',
+    version='1.8.3.dev0',
     author='Flying Circus',
     author_email='mail@flyingcircus.io',
     url='http://bitbucket.org/flyingcircus/fc.agent',
