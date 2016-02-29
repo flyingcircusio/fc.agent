@@ -16,7 +16,7 @@ def parse_estimate(estimate):
     elif estimate.endswith('h'):
         return int(estimate[:-1]) * 60 * 60
     else:
-        return int(estimate)
+        return int(float(estimate))
 
 
 def request():

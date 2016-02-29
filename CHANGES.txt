@@ -4,7 +4,7 @@ Changelog
 1.8.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Don't fail to schedule maintenance if estimate is a float (#20326)
 
 
 1.8.2 (2016-02-19)
