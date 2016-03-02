@@ -96,6 +96,9 @@ class NagiosContacts(object):
             result.write(CONTACT_GROUP_TEMPLATE % dict(
                 name=group['cn'][0],
                 description=group.get('description', group['cn'])[0]))
+            result.write(CONTACT_GROUP_TEMPLATE % dict(
+                name='%s-system' % group['cn'][0],
+                description="System notifications for RG %s" % group['cn'][0]))
         self._flush('/etc/nagios/globals/contactgroups.cfg', result.getvalue())
 
     def admins(self):
@@ -104,18 +107,26 @@ class NagiosContacts(object):
                   if group['cn'] == ['admins']][0]
         return admins['memberUid']
 
-    def stats_permission(self):
-        """Dict that lists groups for which each user has stats permissions"""
-        stats_permission = {}
+    def _permission_map(self, permission):
+        permission_map = {}
         for group in self.groups:
             group_id = group['cn'][0]
             for grant in self.search(
                     'cn=%s,ou=Group' % group_id,
-                    '(&(permission=stats)(objectClass=permissionGrant))'):
+                    '(&(permission=%s)(objectClass=permissionGrant))' %
+                    permission):
                 for user in grant['uid']:
-                    stats_permission.setdefault(user, set())
-                    stats_permission[user].add(group_id)
-        return stats_permission
+                    permission_map.setdefault(user, set())
+                    permission_map[user].add(group_id)
+        return permission_map
+
+    def stats_permission(self):
+        """Dict that lists groups for which each user has stats permissions"""
+        return self._permission_map('stats')
+
+    def wheel_permission(self):
+        """Dict that lists groups for which each user has wheel permissions"""
+        return self._permission_map('wheel')
 
     def users(self):
         return self.search(
@@ -126,6 +137,7 @@ class NagiosContacts(object):
         result = StringIO.StringIO()
         admins = self.admins()
         stats_permission = self.stats_permission()
+        wheel_permission = self.wheel_permission()
 
         for user in self.users():
             additional_options = []
@@ -133,6 +145,9 @@ class NagiosContacts(object):
             if user['uid'][0] in admins:
                 grp.append('admins')
             grp.extend(stats_permission.get(user['uid'][0], []))
+            grp.extend(
+                '%s-system' % group
+                for group in wheel_permission.get(user['uid'][0], []))
             if 'mail' in user:
                 self.contacts_seen.setdefault(user['mail'][0], set()).update(
                     grp)
