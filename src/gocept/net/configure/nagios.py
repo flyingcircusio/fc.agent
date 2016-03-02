@@ -84,8 +84,8 @@ class NagiosContacts(object):
 
     def _purge(self, filename):
         filename = self.prefix + filename
-	if not os.path.exists(filename):
-	    return
+        if not os.path.exists(filename):
+            return
         os.remove(filename)
         self.needs_restart = True
 
