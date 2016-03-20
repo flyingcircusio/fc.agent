@@ -14,12 +14,14 @@ def enc(directory):
          'parameters': {
              'backy_server': 'thishost',
              'backy_schedule': 'asdf',
+             'rbd_pool': 'rbd.hdd',
              'resource_group': 'test',
          }},
         {'name': 'test02',
          'parameters': {
              'backy_server': 'anotherhost',
              'backy_schedule': 'asdf',
+             'rbd_pool': 'rbd.ssd',
              'resource_group': 'test',
          }}]
     d.deletions.return_value = {
@@ -57,8 +59,8 @@ global: {base-dir: /srv/backy, worker-limit: 3}
 jobs:
   test01:
     schedule: asdf
-    source: {consul_acl_token: '123', image: test01.root, pool: test, type: \
-flyingcircus,
+    source: {consul_acl_token: '123', image: test01.root, pool: rbd.hdd, \
+type: flyingcircus,
       vm: test01}
 schedules:
   default:
@@ -94,7 +96,7 @@ def vm_params(vms):
     return [{
         'name': vm, 'parameters': {
             'backy_server': 'thishost', 'backy_schedule': 'default',
-            'resource_group': 'node',
+            'rbd_pool': 'rbd.hdd', 'resource_group': 'node',
         }} for vm in vms]
 
 

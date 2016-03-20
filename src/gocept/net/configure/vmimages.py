@@ -42,7 +42,7 @@ def download_and_uncompress_file(url):
 class BaseImage(object):
 
     hydra_branch_url = 'https://hydra.flyingcircus.io/channels/branches/{}'
-    image_pool = 'rbd'
+    image_pool = 'rbd.hdd'
     image_file = None
 
     def __init__(self, branch):

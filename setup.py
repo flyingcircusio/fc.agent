@@ -43,7 +43,6 @@ system configuration.
             'localconfig-bacula-purge = gocept.net.configure.bacula:purge',
             'localconfig-box-exports = gocept.net.configure.box:exports',
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
-            'localconfig-ceph-pg_num = gocept.net.configure.ceph:pg_num',
             'localconfig-ceph-volumes = gocept.net.configure.ceph:volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
             'localconfig-iptables-inputrules'

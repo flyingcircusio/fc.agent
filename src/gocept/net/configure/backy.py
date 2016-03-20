@@ -105,7 +105,7 @@ class BackyConfig(object):
                     'type': 'flyingcircus',
                     'consul_acl_token': self.consul_acl_token,
                     'image': vm['name'] + '.root',
-                    'pool': vm['parameters']['resource_group'],
+                    'pool': vm['parameters']['rbd_pool'],
                     'vm': name,
                 },
                 'schedule': vm['parameters'].get('backy_schedule', 'default'),
