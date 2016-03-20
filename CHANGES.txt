@@ -4,7 +4,7 @@ Changelog
 1.9.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Switch to explicit RBD pool selection instead of RG-based derivation. #20692
 
 
 1.9.0 (2016-03-03)
