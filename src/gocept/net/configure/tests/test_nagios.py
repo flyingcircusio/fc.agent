@@ -30,6 +30,7 @@ def test_create_contacts(empty_config, tmpdir, capsys, monkeypatch, directory):
     contacts.prefix = str(tmpdir)
     contacts._init_ldap = lambda: None
     contacts.admins = lambda: []
+    contacts.wheel_permission = lambda: {'bob': set('foobar')}
     contacts.stats_permission = lambda: {'bob': set('foobar'),
                                          'alice': set('foobar')}
     contacts.users = lambda: [
