@@ -12,6 +12,7 @@ import tempfile
 logger = logging.getLogger(__name__)
 
 CEPH_CLIENT = socket.gethostname()
+RELEASES = ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']
 
 
 class LockingError(Exception):
@@ -84,18 +85,15 @@ class BaseImage(object):
                 os.unlink(self.image_file)
         except:
             pass
-
         try:
             self.image.unlock('update')
         except Exception:
             pass
-
         try:
             self.image.close()
         except Exception:
             pass
         try:
-
             self.ioctx.close()
         except Exception:
             pass
@@ -168,12 +166,12 @@ class BaseImage(object):
         # Check whether the expected snapshot already exists.
         snapshot_name = 'base-{}'.format(release)
         current_snapshots = self._snapshot_names(self.image)
-        logger.info('\tHave releases: \n\t\t{}'.format(
-            '\n\t\t'.join(current_snapshots)))
         if snapshot_name in self._snapshot_names(self.image):
             # All good. No need to update.
             return
 
+        logger.info('\tHave releases: \n\t\t{}'.format(
+            '\n\t\t'.join(current_snapshots)))
         logger.info('\tDownloading release {} ...'.format(release))
         self.download_image(release_url)
 
@@ -235,8 +233,7 @@ def update():
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     logging.getLogger("requests").setLevel(logging.WARNING)
     try:
-        for branch in ['fc-15.09-dev', 'fc-15.09-staging',
-                       'fc-15.09-production']:
+        for branch in RELEASES:
             logger.info('Updating branch {}'.format(branch))
             with BaseImage(branch) as image:
                 image.update()
