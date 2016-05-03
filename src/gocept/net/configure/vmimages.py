@@ -1,13 +1,16 @@
 import bz2
+import contextlib
 import hashlib
 import logging
-import os.path
+import os
+import os.path as p
 import rados
 import rbd
 import requests
 import socket
 import subprocess
 import tempfile
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +23,13 @@ class LockingError(Exception):
 
 
 def download_and_uncompress_file(url):
-    _, local_filename = tempfile.mkstemp()
+    logging.debug('\t\tGet %s', url)
     r = requests.get(url, stream=True)
     r.raise_for_status()
     decomp = bz2.BZ2Decompressor()
     sha256 = hashlib.sha256()
-    with open(local_filename, 'wb') as f:
+    with tempfile.NamedTemporaryFile(mode='wb', suffix='.bz2',
+                                     prefix='vm-image.', delete=False) as f:
         for bz2chunk in r.iter_content(chunk_size=64 * 1024):
             if not bz2chunk:
                 # filter out keep-alive chunk borders
@@ -37,7 +41,30 @@ def download_and_uncompress_file(url):
                     f.write(chunk)
             except EOFError:
                 break
-    return local_filename, sha256.hexdigest()
+        f.flush()
+        logging.debug('\t\tSaving to %s', f.name)
+        return f.name, sha256.hexdigest()
+
+
+def delta_update(from_, to):
+    """Update changed blocks between image files.
+
+    We assume that one generation of a VM image does not differ
+    fundamentatlly from the generation before. We only update
+    changed blocks. Additionally, we use a stuttering technique to
+    improve fairness.
+    """
+    with open(from_, 'rb') as source:
+        with open(to, 'r+b') as dest:
+            while True:
+                a = source.read(16 * 1024)
+                if not a:
+                    break
+                b = dest.read(16 * 1024)
+                if a != b:
+                    dest.seek(-len(a), os.SEEK_CUR)
+                    dest.write(a)
+                    time.sleep(1e-5)
 
 
 class BaseImage(object):
@@ -62,41 +89,42 @@ class BaseImage(object):
         # Ensure the image exists.
         if self.branch not in self.rbd.list(self.ioctx):
             logger.info('Creating image for {}'.format(self.branch))
-            self.rbd.create(self.ioctx, self.branch, 10)
+            self.rbd.create(self.ioctx, self.branch, 10 * 2**30)
         self.image = rbd.Image(self.ioctx, self.branch)
 
         # Ensure we have a lock - stop handling for this image
         # and clean up (exceptions in __enter__ do not automatically
         # cause __exit__ being called).
         try:
-            self.image.lock_exclusive('update')
-        except (rbd.ImageBusy, rbd.ImageExists):
+            self.image.lock_exclusive(CEPH_CLIENT)
+        except rbd.ImageBusy:
             # Someone is already updating. Ignore.
             logger.info('Image {} already locked -- update in progress '
                         'elsewhere?'.format(self.branch))
-            self.__exit__()
             raise LockingError()
+        except rbd.ImageExists:
+            # _We_ locked the image. Proceed.
+            pass
 
         return self
 
     def __exit__(self, *args, **kw):
         try:
-            if os.path.exists(self.image_file):
+            if self.image_file and p.exists(self.image_file):
                 os.unlink(self.image_file)
-        except:
-            pass
-        try:
-            self.image.unlock('update')
         except Exception:
-            pass
+            logger.exception('error while removing image file %s',
+                             self.image_file)
+        try:
+            logger.debug('Unlocking image %s', self.branch)
+            self.image.unlock(CEPH_CLIENT)
+        except Exception:
+            logger.exception('error while unlocking')
         try:
             self.image.close()
-        except Exception:
-            pass
-        try:
             self.ioctx.close()
         except Exception:
-            pass
+            logger.exception('error while closing rbd connection')
         self.cluster.shutdown()
 
     def _snapshot_names(self, image):
@@ -113,7 +141,7 @@ class BaseImage(object):
             allow_redirects=False)
         assert release.status_code in [301, 302], release.status_code
         release_url = release.headers['Location']
-        release_id = os.path.basename(release_url)
+        release_id = p.basename(release_url)
         return release_id, release_url
 
     def download_image(self, release_url):
@@ -127,10 +155,8 @@ class BaseImage(object):
                 "Image had checksum {} but expected {}. "
                 "Aborting.".format(image_hash, checksum))
 
-    def store_in_ceph(self):
+    def image_size(self):
         # Expects self.image_file to have been downloaded and verified.
-
-        # Resize the Ceph image
         info = subprocess.check_output(
             ['qemu-img', 'info', self.image_file])
         for line in info.decode('ascii').splitlines():
@@ -140,28 +166,43 @@ class BaseImage(object):
                 assert size.startswith('(')
                 size = int(size[1:])
                 break
-        self.image.resize(size)
+        assert size > 0
+        return size
 
-        # Update image data.
-        # qemu-img can convert directly to rbd, however, this
-        # doesn't work under some circumstances, like the image
-        # already existing, which is why we choose to map and use
-        # the raw converter.
+    @property
+    def volume(self):
+        return '{}/{}'.format(self.image_pool, self.branch)
+
+    @contextlib.contextmanager
+    def mapped(self):
+        dev = subprocess.check_output(['rbd', '--id', CEPH_CLIENT, 'map',
+                                       self.volume])
+        dev = dev.decode().strip()
         try:
-            target = subprocess.check_output(
-                ['rbd', '--id', CEPH_CLIENT, 'map',
-                 '{}/{}'.format(self.image_pool, self.branch)])
-            target = target.strip()
-            subprocess.check_call(
-                ['qemu-img', 'convert', '-n', '-f', 'qcow2',
-                 self.image_file, '-O', 'raw', target])
+            yield dev
         finally:
-            subprocess.check_call(
-                ['rbd', '--id', CEPH_CLIENT, 'unmap', target])
+            subprocess.check_call(['rbd', '--id', CEPH_CLIENT, 'unmap', dev])
+
+    def store_in_ceph(self):
+        """Updates image data.
+
+        qemu-img can convert directly to rbd, however, this
+        doesn't work under some circumstances, like the image
+        already existing etc.
+        """
+        with tempfile.NamedTemporaryFile(prefix='vm-bounce.') as bounce:
+            size = self.image_size()
+            self.image.resize(size)
+            bounce.truncate(size)
+            subprocess.check_call([
+                'qemu-img', 'convert', '-n', '-fqcow2', self.image_file,
+                '-Oraw', bounce.name])
+            bounce.seek(0)
+            with self.mapped() as blockdev:
+                delta_update(bounce.name, blockdev)
 
     def update(self):
         release, release_url = self.current_release()
-        logger.info("\tRelease: {}".format(release))
 
         # Check whether the expected snapshot already exists.
         snapshot_name = 'base-{}'.format(release)
@@ -172,18 +213,23 @@ class BaseImage(object):
 
         logger.info('\tHave releases: \n\t\t{}'.format(
             '\n\t\t'.join(current_snapshots)))
-        logger.info('\tDownloading release {} ...'.format(release))
+        logger.info('\tDownloading release {}'.format(release))
         self.download_image(release_url)
 
-        # Store in ceph
-        logger.info('\tStoring release in Ceph RBD volume ...')
+        logger.info('\tStoring in volume {}/{}'.format(
+            self.image_pool, self.branch))
         self.store_in_ceph()
 
         # Create new snapshot and protect it so we can clone from it.
+        logger.info('\tCreating snapshot {}'.format(snapshot_name))
         self.image.create_snap(snapshot_name)
         self.image.protect_snap(snapshot_name)
+        self.flatten()
+        self.purge()
 
     def flatten(self):
+        """Decouple VMs created from their base snapshots."""
+        logger.debug('\tFlattening child images')
         for snap in self.image.list_snaps():
             snap = rbd.Image(self.ioctx, self.branch, snap['name'])
             for child_pool, child_image in snap.list_children():
@@ -197,26 +243,29 @@ class BaseImage(object):
                     logger.exception("Error trying to flatten {}/{}".format(
                                      child_pool, child_image))
                 finally:
+                    image.close()
                     pool.close()
 
     def purge(self):
-        # Delete old images, but keep the last three.
-        #
-        # Keeping a few is good because there may be race conditions that
-        # images are currently in use even after we called flatten. (This
-        # is what unprotect does, but there is no way to run flatten/unprotect
-        # in an atomic fashion. However, we expect all clients to always use
-        # the newest one. So, the race condition that remains is that we just
-        # downloaded a new image and someone else created a VM while we added
-        # it and didn't see the new snapshot, but we already were done
-        # flattening. Keeping 3 should be more than sufficient.
-        #
-        # If the ones we want to purge won't work, then we just ignore that
-        # for now.
-        #
-        # The CLI returns snapshots in their ID order (which appears to be
-        # guaranteed to increase) but the API isn't documented. Lets order
-        # them ourselves to ensure reliability.
+        """
+        Delete old images, but keep the last three.
+
+        Keeping a few is good because there may be race conditions that
+        images are currently in use even after we called flatten. (This
+        is what unprotect does, but there is no way to run flatten/unprotect
+        in an atomic fashion. However, we expect all clients to always use
+        the newest one. So, the race condition that remains is that we just
+        downloaded a new image and someone else created a VM while we added
+        it and didn't see the new snapshot, but we already were done
+        flattening. Keeping 3 should be more than sufficient.
+
+        If the ones we want to purge won't work, then we just ignore that
+        for now.
+
+        The CLI returns snapshots in their ID order (which appears to be
+        guaranteed to increase) but the API isn't documented. Lets order
+        them ourselves to ensure reliability.
+        """
         snaps = list(self.image.list_snaps())
         snaps.sort(key=lambda x: x['id'])
         for snap in snaps[:-3]:
@@ -237,12 +286,10 @@ def update():
             logger.info('Updating branch {}'.format(branch))
             with BaseImage(branch) as image:
                 image.update()
-                image.flatten()
-                image.purge()
     except LockingError:
         # This is expected and should be silent. Someone else is updating
         # this branch at the moment.
-        pass
+        logging.debug('Failed to acquire lock')
     except Exception:
         logger.exception(
             "An error occured while updating branch `{}`".format(branch))
