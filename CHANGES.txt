@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.3 (unreleased)
+1.9.3 (2016-05-04)
 ------------------
 
 - Fix bug in VM image charging. Also reduce cluster load while charging. #21393
