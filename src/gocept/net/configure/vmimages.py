@@ -64,7 +64,7 @@ def delta_update(from_, to):
                 if a != b:
                     dest.seek(-len(a), os.SEEK_CUR)
                     dest.write(a)
-                    time.sleep(1e-5)
+                    time.sleep(1e-4)
 
 
 class BaseImage(object):
