@@ -6,21 +6,20 @@ import pytest
 import subprocess
 
 
-@pytest.fixture
-def enc(directory):
+def mock_enc(directory, schedule='default'):
     d = directory()
     d.list_virtual_machines.return_value = [
         {'name': 'test01',
          'parameters': {
              'backy_server': 'thishost',
-             'backy_schedule': 'asdf',
+             'backy_schedule': schedule,
              'rbd_pool': 'rbd.hdd',
              'resource_group': 'test',
          }},
         {'name': 'test02',
          'parameters': {
              'backy_server': 'anotherhost',
-             'backy_schedule': 'asdf',
+             'backy_schedule': schedule,
              'rbd_pool': 'rbd.ssd',
              'resource_group': 'test',
          }}]
@@ -31,6 +30,11 @@ def enc(directory):
         'node03': {'stages': ['prepare', 'soft', 'hard']},
         'node04': {'stages': ['prepare', 'soft', 'hard', 'purge']}}
     return d
+
+
+@pytest.fixture
+def enc(directory):
+    return mock_enc(directory)
 
 
 @pytest.fixture
@@ -45,7 +49,8 @@ def backyenv(tmpdir, monkeypatch):
     return (check_call, tmpdir)
 
 
-def test_backy_config(backyenv, enc):
+def test_backy_config(backyenv, directory):
+    mock_enc(directory)
     configure()
 
     call, prefix = backyenv
@@ -58,10 +63,10 @@ def test_backy_config(backyenv, enc):
 global: {base-dir: /srv/backy, worker-limit: 3}
 jobs:
   test01:
-    schedule: asdf
-    source: {consul_acl_token: '123', image: test01.root, pool: rbd.hdd, \
-type: flyingcircus,
-      vm: test01}
+    schedule: default
+    source: {consul_acl_token: '123', full-always: false, image: test01.root, \
+pool: rbd.hdd,
+      type: flyingcircus, vm: test01}
 schedules:
   default:
     daily: {interval: 1d, keep: 10}
@@ -75,7 +80,39 @@ schedules:
 """
 
 
-def test_backy_remove_deleted_nodes(backyenv, enc):
+def test_backy_config_always_full(backyenv, directory):
+    mock_enc(directory, 'default-full')
+    configure()
+
+    call, prefix = backyenv
+    assert call.call_args_list == [
+        mock.call(['/etc/init.d/backy', 'restart'])]
+    with open(str(prefix / 'etc/backy.conf')) as c:
+        assert c.read() == """\
+# Managed by localconfig, don't edit
+
+global: {base-dir: /srv/backy, worker-limit: 3}
+jobs:
+  test01:
+    schedule: default
+    source: {consul_acl_token: '123', full-always: true, image: test01.root, \
+pool: rbd.hdd,
+      type: flyingcircus, vm: test01}
+schedules:
+  default:
+    daily: {interval: 1d, keep: 10}
+    monthly: {interval: 30d, keep: 4}
+    weekly: {interval: 7d, keep: 4}
+  frequent:
+    daily: {interval: 1d, keep: 10}
+    hourly: {interval: 1h, keep: 25}
+    monthly: {interval: 30d, keep: 4}
+    weekly: {interval: 7d, keep: 4}
+"""
+
+
+def test_backy_remove_deleted_nodes(backyenv, directory):
+    mock_enc(directory)
     _call, prefix = backyenv
     os.makedirs(str(prefix / 'srv/backy/node00'))
     os.makedirs(str(prefix / 'srv/backy/node01'))

@@ -89,6 +89,9 @@ class BackyConfig(object):
         Goes over all nodes in the current location and selects those
         that are assigned to the current backup server and are not
         marked for deletion.
+
+        Schedules may have variants which are separated by a hyphen,
+        e.g. "default-full".
         """
         with gocept.net.directory.exceptions_screened():
             d = gocept.net.directory.Directory()
@@ -100,6 +103,10 @@ class BackyConfig(object):
                 continue
             if 'hard' in self.deletions.get(name, {'stages': []})['stages']:
                 continue
+            schedule = vm['parameters'].get('backy_schedule', 'default')
+            variant = None
+            if '-' in schedule:
+                schedule, variant = schedule.split('-', 1)
             jobs[name] = {
                 'source': {
                     'type': 'flyingcircus',
@@ -107,8 +114,9 @@ class BackyConfig(object):
                     'image': vm['name'] + '.root',
                     'pool': vm['parameters']['rbd_pool'],
                     'vm': name,
+                    'full-always': (variant == 'full'),
                 },
-                'schedule': vm['parameters'].get('backy_schedule', 'default'),
+                'schedule': schedule,
             }
         return jobs
 
