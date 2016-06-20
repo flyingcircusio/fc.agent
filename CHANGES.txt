@@ -1,10 +1,10 @@
 Changelog
 =========
 
-1.9.4 (unreleased)
+1.9.4 (2016-06-20)
 ------------------
 
-- Nothing changed yet.
+- New backup schedule "default-full". #21960
 
 
 1.9.3 (2016-05-04)
