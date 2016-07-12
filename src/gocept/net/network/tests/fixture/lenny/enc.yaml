@@ -1,0 +1,89 @@
+---
+resource_group: services
+creation_date: '2015-02-23T13:08:38.081700+00:00'
+timezone: Europe/Berlin
+resource_group_parent: ''
+id: 4215
+machine: physical
+directory_ring: 0
+in_transit: false
+environment: dev_ckauhaus
+production: true
+location: dev
+environment_class: Puppet
+profile: kvm
+interfaces:
+  ipmi:
+    mac: b8:ac:6f:13:f0:06
+    networks:
+      2a02:238:f030:1c1::/64:
+      - 2a02:238:f030:1c1::39
+      172.20.1.0/24:
+      - 172.20.1.94
+    bridged: false
+    gateways:
+      2a02:238:f030:1c1::/64: 2a02:238:f030:1c1::1
+      172.20.1.0/24: 172.20.1.1
+  sto:
+    mac: b8:ac:6f:13:f0:04
+    networks:
+      2a02:238:f030:1c4::/64:
+      - 2a02:238:f030:1c4::1077
+      172.20.4.0/24:
+      - 172.20.4.55
+    bridged: false
+    gateways:
+      2a02:238:f030:1c4::/64: 2a02:238:f030:1c4::1
+      172.20.4.0/24: 172.20.4.1
+  mgm:
+    mac: b8:ac:6f:13:ef:fe
+    networks:
+      2a02:238:f030:1c1::/64:
+      - 2a02:238:f030:1c1::1077
+      172.20.1.0/24:
+      - 172.20.1.95
+    bridged: false
+    gateways:
+      2a02:238:f030:1c1::/64: 2a02:238:f030:1c1::1
+      172.20.1.0/24: 172.20.1.1
+  srv:
+    mac: b8:ac:6f:13:f0:00
+    networks:
+      172.30.3.0/24: []
+      172.20.3.0/24:
+      - 172.20.3.55
+      2a02:238:f030:1c3::/64:
+      - 2a02:238:f030:1c3::1082
+    bridged: true
+    gateways:
+      172.30.3.0/24: 172.30.3.1
+      172.20.3.0/24: 172.20.3.1
+      2a02:238:f030:1c3::/64: 2a02:238:f030:1c3::1
+  fe:
+    mac: b8:ac:6f:13:f0:02
+    networks:
+      2a02:238:f030:1c2::/64:
+      - 2a02:238:f030:1c2::106f
+      172.20.2.0/25: []
+    bridged: true
+    gateways:
+      2a02:238:f030:1c2::/64: 2a02:238:f030:1c2::1
+      172.20.2.0/25: 172.20.2.1
+  dhp:
+    mac: b8:ac:6f:13:f0:02
+    networks:
+      172.21.48.0/20:
+      - 172.21.48.4
+      2a02:238:f030:c013::/64:
+      - 2a02:238:f030:c013::4
+    bridged: false
+    gateways:
+      172.21.48.0/20: 172.21.48.1
+      2a02:238:f030:c013::/64: 2a02:238:f030:c013::1
+environment_url: file:///home/ckauhaus/fc.platform
+servicing: true
+service_description: KVM server
+reverses: {}
+frontend_ips_v6: 1
+frontend_ips_v4: 0
+rack: MDF W.0.1

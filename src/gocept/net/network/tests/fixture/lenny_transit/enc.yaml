@@ -1,0 +1,52 @@
+---
+resource_group: services
+creation_date: '2015-02-23T13:08:38.081700+00:00'
+timezone: Europe/Berlin
+resource_group_parent: ''
+id: 4215
+machine: physical
+directory_ring: 0
+in_transit: true
+environment: dev_ckauhaus
+production: true
+location: dev
+environment_class: Puppet
+profile: kvm
+interfaces:
+  ipmi:
+    mac: b8:ac:6f:13:f0:06
+    networks: {}
+    bridged: false
+    gateways: {}
+  sto:
+    mac: b8:ac:6f:13:f0:04
+    networks: {}
+    bridged: false
+    gateways: {}
+  mgm:
+    mac: b8:ac:6f:13:ef:fe
+    networks: {}
+    bridged: false
+    gateways: {}
+  srv:
+    mac: b8:ac:6f:13:f0:00
+    networks: {}
+    bridged: true
+    gateways: {}
+  fe:
+    mac: b8:ac:6f:13:f0:02
+    networks: {}
+    bridged: true
+    gateways: {}
+  dhp:
+    mac: b8:ac:6f:13:f0:02
+    networks: {}
+    bridged: false
+    gateways: {}
+environment_url: file:///home/ckauhaus/fc.platform
+servicing: true
+service_description: KVM server
+reverses: {}
+frontend_ips_v6: 0
+frontend_ips_v4: 0
+rack: transit

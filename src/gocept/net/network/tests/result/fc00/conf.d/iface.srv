@@ -1,0 +1,32 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethsrv="\
+    172.22.48.127/20
+    2a02:248:101:63::10d6/64
+"
+
+routes_ethsrv="\
+    172.22.48.0/20 table 3
+    default via 172.22.48.1 table 3
+    default via 172.22.48.1
+    195.62.125.128/25 table 3
+    195.62.126.128/25 table 3
+    2a02:248:101:63::/64 table 3
+    default via 2a02:248:101:63::1 table 3
+    default via 2a02:248:101:63::1
+"
+
+rules_ethsrv="\
+    from 172.22.48.127/20 table 3 priority 30
+    to 172.22.48.0/20 table 3 priority 30
+    to 195.62.125.128/25 table 3 priority 30
+    to 195.62.126.128/25 table 3 priority 30
+"
+
+rules6_ethsrv="\
+    from 2a02:248:101:63::10d6/64 table 3 priority 30
+    to 2a02:248:101:63::/64 table 3 priority 30
+"
+
+mtu_ethsrv=1500
+metric_ethsrv=900

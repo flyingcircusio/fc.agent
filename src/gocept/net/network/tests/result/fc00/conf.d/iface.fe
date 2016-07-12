@@ -1,0 +1,30 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethfe="\
+    195.62.125.72/25
+    2a02:248:101:62::10d1/64
+"
+
+routes_ethfe="\
+    195.62.125.0/25 table 2
+    default via 195.62.125.1 table 2
+    default via 195.62.125.1
+    195.62.126.0/25 table 2
+    2a02:248:101:62::/64 table 2
+    default via 2a02:248:101:62::1 table 2
+    default via 2a02:248:101:62::1
+"
+
+rules_ethfe="\
+    from 195.62.125.72/25 table 2 priority 20
+    to 195.62.125.0/25 table 2 priority 20
+    to 195.62.126.0/25 table 2 priority 20
+"
+
+rules6_ethfe="\
+    from 2a02:248:101:62::10d1/64 table 2 priority 20
+    to 2a02:248:101:62::/64 table 2 priority 20
+"
+
+mtu_ethfe=1500
+metric_ethfe=500

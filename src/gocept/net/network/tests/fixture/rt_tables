@@ -1,0 +1,16 @@
+#
+# reserved values
+#
+255	local
+254	main
+253	default
+0	unspec
+#
+# local
+#
+1       mgm
+2       fe
+3       srv
+4       sto
+8       stb
+19      dhp
