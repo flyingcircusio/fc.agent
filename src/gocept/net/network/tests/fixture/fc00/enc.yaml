@@ -1,78 +1,63 @@
 ---
-parameters:
-  resource_group: fc
-  kvm_host: kyle10
-  creation_date: '2014-11-14T15:04:38.107861+00:00'
-  timezone: Europe/Berlin
-  resource_group_parent: ''
-  disk: 30
-  id: 4431
-  machine: virtual
-  directory_ring: 1
-  in_transit: false
-  backy_schedule: default
-  environment: production
-  production: true
-  location: rzob
-  deletion:
-    stages: []
-    deadline: ''
-  online: true
-  rbd_pool: rbd.hdd
-  environment_class: Puppet
-  profile: generic
-  interfaces:
-    srv:
-      mac: 02:00:00:03:11:4F
-      networks:
-        195.62.126.128/25: []
-        172.22.48.0/20:
-        - 172.22.48.127
-        195.62.125.128/25: []
-        2a02:248:101:63::/64:
-        - 2a02:248:101:63::10d6
-      bridged: false
-      gateways:
-        195.62.126.128/25: 195.62.126.129
-        172.22.48.0/20: 172.22.48.1
-        195.62.125.128/25: 195.62.125.129
-        2a02:248:101:63::/64: 2a02:248:101:63::1
-    fe:
-      mac: 02:00:00:02:11:4F
-      networks:
-        195.62.125.0/25:
-        - 195.62.125.72
-        2a02:248:101:62::/64:
-        - 2a02:248:101:62::10d1
-        195.62.126.0/25: []
-      bridged: false
-      gateways:
-        195.62.125.0/25: 195.62.125.1
-        2a02:248:101:62::/64: 2a02:248:101:62::1
-        195.62.126.0/25: 195.62.126.1
-  memory: 2048
-  environment_url: https://bitbucket.org/flyingcircus/fc.platform#production
-  servicing: true
-  service_description: Redmine, Dashboard, Calendar
-  reverses:
-    2a02:248:101:62::10d1: plan.flyingcircus.io.
-    195.62.125.72: plan.flyingcircus.io.
-  backy_server: barbrady02
-  frontend_ips_v6: 1
-  frontend_ips_v4: 0
-  directory_password: achkidfiedbasjewiond
-  cores: 2
-last_maintenance_end: '2016-06-10T18:21:44.557901+00:00'
-classes:
-- role::appserver
-- role::mailserver
-- role::postgresql93
-- role::pspdf
-- role::webgateway
-name: fc00
-roles:
-- appserver
-- mailserver
-- postgresql93
-- pspdf
-- webgateway
+resource_group: fc
+kvm_host: kyle10
+creation_date: '2014-11-14T15:04:38.107861+00:00'
+timezone: Europe/Berlin
+resource_group_parent: ''
+disk: 30
+id: 4431
+machine: virtual
+directory_ring: 1
+in_transit: false
+backy_schedule: default
+environment: production
+production: true
+location: rzob
+deletion:
+  stages: []
+  deadline: ''
+online: true
+rbd_pool: rbd.hdd
+environment_class: Puppet
+profile: generic
+interfaces:
+  srv:
+    mac: 02:00:00:03:11:4F
+    networks:
+      195.62.126.128/25: []
+      172.22.48.0/20:
+      - 172.22.48.127
+      195.62.125.128/25: []
+      2a02:248:101:63::/64:
+      - 2a02:248:101:63::10d6
+    bridged: false
+    gateways:
+      195.62.126.128/25: 195.62.126.129
+      172.22.48.0/20: 172.22.48.1
+      195.62.125.128/25: 195.62.125.129
+      2a02:248:101:63::/64: 2a02:248:101:63::1
+  fe:
+    mac: 02:00:00:02:11:4F
+    networks:
+      195.62.125.0/25:
+      - 195.62.125.72
+      2a02:248:101:62::/64:
+      - 2a02:248:101:62::10d1
+      195.62.126.0/25: []
+    bridged: false
+    gateways:
+      195.62.125.0/25: 195.62.125.1
+      2a02:248:101:62::/64: 2a02:248:101:62::1
+      195.62.126.0/25: 195.62.126.1
+memory: 2048
+environment_url: https://bitbucket.org/flyingcircus/fc.platform#production
+servicing: true
+service_description: Redmine, Dashboard, Calendar
+reverses:
+  2a02:248:101:62::10d1: plan.flyingcircus.io.
+  195.62.125.72: plan.flyingcircus.io.
+backy_server: barbrady02
+frontend_ips_v6: 1
+frontend_ips_v4: 0
+directory_password: achkidfiedbasjewiond
+cores: 2

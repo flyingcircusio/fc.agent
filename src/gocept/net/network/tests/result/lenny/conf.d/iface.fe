@@ -1,0 +1,29 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethfe="null"
+mtu_ethfe=1500
+
+bridge_brfe="ethfe"
+rc_net_brfe_need="net.ethfe"
+
+config_brfe="\
+    2a02:238:f030:1c2::106f/64
+"
+
+routes_brfe="\
+    2a02:238:f030:1c2::/64 table 2
+    default via 2a02:238:f030:1c2::1 table 2
+    default via 2a02:238:f030:1c2::1
+"
+
+rules_brfe="\
+    to 172.20.2.0/25 table 2 priority 20
+"
+
+rules6_brfe="\
+    from 2a02:238:f030:1c2::106f/64 table 2 priority 20
+    to 2a02:238:f030:1c2::/64 table 2 priority 20
+"
+
+mtu_brfe=1500
+metric_brfe=500
