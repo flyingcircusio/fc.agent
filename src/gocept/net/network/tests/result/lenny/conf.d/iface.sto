@@ -1,0 +1,24 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethsto="\
+    172.20.4.55/24
+    2a02:238:f030:1c4::1077/64
+"
+
+routes_ethsto="\
+    172.20.4.0/24 table 4
+    2a02:238:f030:1c4::/64 table 4
+"
+
+rules_ethsto="\
+    from 172.20.4.55/24 table 4 priority 40
+    to 172.20.4.0/24 table 4 priority 40
+"
+
+rules6_ethsto="\
+    from 2a02:238:f030:1c4::1077/64 table 4 priority 40
+    to 2a02:238:f030:1c4::/64 table 4 priority 40
+"
+
+mtu_ethsto=9000
+metric_ethsto=1000

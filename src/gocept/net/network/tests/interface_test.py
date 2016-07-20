@@ -75,7 +75,7 @@ def test_lenny_confd():
     hc.create_all_interfaces()
     confd = hc.confd('net.d')
     assert len(confd.keys()) == 5  # XXX should be 4 (w/o dhp)
-    for vlan in ['fe', 'srv', 'sto', 'stb']:
+    for vlan in ['fe', 'srv', 'sto', 'mgm']:
         assert confd['net.d/iface.{}'.format(vlan)] == str(
             pkg_resources.resource_string(
                 __name__, 'result/lenny/conf.d/iface.{}'.format(vlan)))

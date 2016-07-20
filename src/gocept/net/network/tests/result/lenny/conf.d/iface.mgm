@@ -1,0 +1,28 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethmgm="\
+    172.20.1.95/24
+    2a02:238:f030:1c1::1077/64
+"
+
+routes_ethmgm="\
+    172.20.1.0/24 table 1
+    default via 172.20.1.1 table 1
+    default via 172.20.1.1
+    2a02:238:f030:1c1::/64 table 1
+    default via 2a02:238:f030:1c1::1 table 1
+    default via 2a02:238:f030:1c1::1
+"
+
+rules_ethmgm="\
+    from 172.20.1.95/24 table 1 priority 10
+    to 172.20.1.0/24 table 1 priority 10
+"
+
+rules6_ethmgm="\
+    from 2a02:238:f030:1c1::1077/64 table 1 priority 10
+    to 2a02:238:f030:1c1::/64 table 1 priority 10
+"
+
+mtu_ethmgm=1500
+metric_ethmgm=900

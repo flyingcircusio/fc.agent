@@ -1,0 +1,36 @@
+# Managed by configure-interface. Don't edit.
+
+config_ethsrv="null"
+mtu_ethsrv=1500
+
+bridge_brsrv="ethsrv"
+rc_net_brsrv_need="net.ethsrv"
+
+config_brsrv="\
+    172.20.3.55/24
+    2a02:238:f030:1c3::1082/64
+"
+
+routes_brsrv="\
+    172.20.3.0/24 table 3
+    default via 172.20.3.1 table 3
+    default via 172.20.3.1
+    172.30.3.0/24 table 3
+    2a02:238:f030:1c3::/64 table 3
+    default via 2a02:238:f030:1c3::1 table 3
+    default via 2a02:238:f030:1c3::1
+"
+
+rules_brsrv="\
+    from 172.20.3.55/24 table 3 priority 30
+    to 172.20.3.0/24 table 3 priority 30
+    to 172.30.3.0/24 table 3 priority 30
+"
+
+rules6_brsrv="\
+    from 2a02:238:f030:1c3::1082/64 table 3 priority 30
+    to 2a02:238:f030:1c3::/64 table 3 priority 30
+"
+
+mtu_brsrv=1500
+metric_brsrv=600
