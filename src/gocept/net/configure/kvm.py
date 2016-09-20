@@ -39,7 +39,7 @@ class VM(object):
 
     def ensure(self):
         """Check single VM"""
-        cmd = ['fc-qemu', 'ensure', self.cfg]
+        cmd = ['fc-qemu', 'ensure', self.name]
         if VERBOSE:
             cmd[1:1] = ['-v']
             print('calling: ' + ' '.join(cmd))

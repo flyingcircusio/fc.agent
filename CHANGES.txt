@@ -1,10 +1,11 @@
 Changelog
 =========
 
-1.9.5 (unreleased)
+1.10 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Drop the invocation of fc-qemu using the config file and use the VM name
+  instead. (Requires fc-qemu 0.8.2)
 
 
 1.9.4 (2016-06-20)
