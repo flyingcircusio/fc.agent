@@ -141,15 +141,31 @@ class ReqManager(object):
                     applicable=None, uuid=None):
         """Create new request object and save it to disk.
 
+        If a request with exactly the same comment already exists in the
+        current list of request (not the archive) then do not create an
+        additional request, but update the parameters.
+
         The Request instance is initialized with the passed arguments and a
         newly allocated reqid. Return the new Request instance.
         """
         reqid = self._allocate_id()
-        request = gocept.net.maintenance.Request(
-            reqid, estimate, script, comment,
-            applicable=applicable, path=self._path(reqid), uuid=uuid)
+        for request in self.requests().values():
+            if comment is None:
+                continue
+            if request.comment != comment:
+                continue
+            LOG.info('updating existing maintenance request %s', request.uuid)
+            request.estimate = estimate
+            request.script = script
+            request.applicable = applicable
+            break
+        else:
+            request = gocept.net.maintenance.Request(
+                reqid, estimate, script, comment,
+                applicable=applicable, path=self._path(reqid), uuid=uuid)
+            LOG.info('creating new maintenance request %s', request.uuid)
         request.save()
-        LOG.info('creating new maintenance request %s', request.uuid)
+
         if not request.script:
             LOG.warning("(req %s) empty script -- hope that's ok",
                         request.uuid)

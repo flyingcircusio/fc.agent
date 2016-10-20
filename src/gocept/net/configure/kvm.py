@@ -8,6 +8,7 @@ import gocept.net.directory
 import multiprocessing
 import os
 import os.path
+import shutil
 import subprocess
 import sys
 import time
@@ -74,3 +75,13 @@ def ensure_vms():
     # before.
     delete_configs()
     sys.exit(max(exitcodes))
+
+
+def ensure_qemu_binary_generation():
+    """Manage the "qemu-binary-generation" markers injected by fc.qemu
+    into a VM.
+    """
+    # Update the -booted marker if necessary.
+    if os.path.exists('/tmp/fc-data/qemu-binary-generation-booted'):
+        shutil.move('/tmp/fc-data/qemu-binary-generation-booted',
+                    '/run/qemu-binary-generation-booted')

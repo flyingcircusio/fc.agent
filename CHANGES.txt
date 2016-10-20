@@ -7,6 +7,8 @@ Changelog
 - Drop the invocation of fc-qemu using the config file and use the VM name
   instead. (Requires fc-qemu 0.8.2)
 
+- Always make pending requests unique based on their comment.
+  When a request with an identical comment is registered we update the parameters, though.
 
 1.9.4 (2016-06-20)
 ------------------

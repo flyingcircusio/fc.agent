@@ -104,6 +104,31 @@ def test_add_should_increment_seq(tmpdir, request_cls):
     assert '8\n' == open(seqfile).read()
 
 
+def test_add_updates_existing_with_same_comment(tmpdir):
+    with ReqManager(str(tmpdir)) as rm:
+        first = rm.add_request(30, 'script', 'comment')
+        rm.add_request(60, 'script2', 'comment')
+
+        requests = rm.requests()
+        assert len(requests) == 1
+        assert requests[first.uuid].estimate == 60
+        assert requests[first.uuid].script == 'script2'
+
+
+def test_add_does_not_fold_when_comment_is_none(tmpdir, request_cls):
+    with ReqManager(str(tmpdir)) as rm:
+        rm.add_request(30, 'script')
+        rm.add_request(60, 'script2')
+        assert len(rm.requests()) == 2
+
+
+def test_add_does_not_fold_when_comment_differs(tmpdir, request_cls):
+    with ReqManager(str(tmpdir)) as rm:
+        rm.add_request(30, 'script', 'comment1')
+        rm.add_request(60, 'script2', 'comment2')
+        assert len(rm.requests()) == 2
+
+
 def test_schedule_emptylist(tmpdir, dir_fac):
     directory = dir_fac.return_value
     directory.schedule_maintenance = mock.Mock()
