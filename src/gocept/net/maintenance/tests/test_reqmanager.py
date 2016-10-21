@@ -115,14 +115,14 @@ def test_add_updates_existing_with_same_comment(tmpdir):
         assert requests[first.uuid].script == 'script2'
 
 
-def test_add_does_not_fold_when_comment_is_none(tmpdir, request_cls):
+def test_add_does_not_fold_when_comment_is_none(tmpdir):
     with ReqManager(str(tmpdir)) as rm:
         rm.add_request(30, 'script')
         rm.add_request(60, 'script2')
         assert len(rm.requests()) == 2
 
 
-def test_add_does_not_fold_when_comment_differs(tmpdir, request_cls):
+def test_add_does_not_fold_when_comment_differs(tmpdir):
     with ReqManager(str(tmpdir)) as rm:
         rm.add_request(30, 'script', 'comment1')
         rm.add_request(60, 'script2', 'comment2')
