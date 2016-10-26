@@ -18,7 +18,7 @@ BASEDIR = '/srv/backy'
 MAIN_CONFIG = {
     'global': {
         'base-dir': BASEDIR,
-        'worker-limit': 3,
+        'worker-limit': 5,
     },
     'schedules': {
         'default': {
