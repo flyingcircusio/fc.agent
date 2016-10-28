@@ -15,10 +15,10 @@ import yaml
 
 _log = logging.getLogger(__name__)
 BASEDIR = '/srv/backy'
-MAIN_CONFIG = {
+DEFAULT_CONFIG = {
     'global': {
         'base-dir': BASEDIR,
-        'worker-limit': 5,
+        'worker-limit': 3,
     },
     'schedules': {
         'default': {
@@ -125,7 +125,12 @@ class BackyConfig(object):
 
         Returns True if file has been changed.
         """
-        config = copy.copy(MAIN_CONFIG)
+        global_conf = self.prefix + '/etc/backy.global.conf'
+        if p.exists(global_conf):
+            with open(global_conf) as f:
+                config = yaml.safe_load(f)
+        else:
+            config = copy.copy(DEFAULT_CONFIG)
         config['jobs'] = self.job_config()
         output = gocept.net.configfile.ConfigFile(
             self.prefix + '/etc/backy.conf', mode=0o640)

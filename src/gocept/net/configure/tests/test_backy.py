@@ -56,7 +56,7 @@ def test_backy_config(backyenv, directory):
     call, prefix = backyenv
     assert call.call_args_list == [
         mock.call(['/etc/init.d/backy', 'restart'])]
-    with open(str(prefix / 'etc/backy.conf')) as c:
+    with (prefix / 'etc/backy.conf').open() as c:
         assert c.read() == """\
 # Managed by localconfig, don't edit
 
@@ -79,6 +79,21 @@ schedules:
     weekly: {interval: 7d, keep: 4}
 """
 
+def test_backy_config_from_global(backyenv, directory):
+    mock_enc(directory)
+    call, prefix = backyenv
+    (prefix / 'etc/backy.global.conf').write_binary("""
+global: {worker-limit: 7}
+""", ensure=True)
+    configure()
+
+    with (prefix / 'etc/backy.conf').open() as c:
+        assert """\
+# Managed by localconfig, don't edit
+
+global: {worker-limit: 7}
+jobs:
+""" in c.read()
 
 def test_backy_config_always_full(backyenv, directory):
     mock_enc(directory, 'default-full')
@@ -88,28 +103,13 @@ def test_backy_config_always_full(backyenv, directory):
     assert call.call_args_list == [
         mock.call(['/etc/init.d/backy', 'restart'])]
     with open(str(prefix / 'etc/backy.conf')) as c:
-        assert c.read() == """\
-# Managed by localconfig, don't edit
-
-global: {base-dir: /srv/backy, worker-limit: 3}
-jobs:
+        assert """\
   test01:
     schedule: default
     source: {consul_acl_token: '123', full-always: true, image: test01.root, \
 pool: rbd.hdd,
       type: flyingcircus, vm: test01}
-schedules:
-  default:
-    daily: {interval: 1d, keep: 10}
-    monthly: {interval: 30d, keep: 4}
-    weekly: {interval: 7d, keep: 4}
-  frequent:
-    daily: {interval: 1d, keep: 10}
-    hourly: {interval: 1h, keep: 25}
-    monthly: {interval: 30d, keep: 4}
-    weekly: {interval: 7d, keep: 4}
-"""
-
+""" in c.read()
 
 def test_backy_remove_deleted_nodes(backyenv, directory):
     mock_enc(directory)
