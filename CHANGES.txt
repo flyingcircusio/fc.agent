@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.6 (unreleased)
+1.9.6 (2016-10-31)
 ------------------
 
 - Read global backy.conf parameters from `/etc/backy.global.conf`. Fall back to
