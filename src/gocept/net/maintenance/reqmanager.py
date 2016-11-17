@@ -41,9 +41,18 @@ def require_directory(func):
 def spawn(command):
     """Run shell script in current request's context."""
     LOG.debug('running %s', command)
-    returncode = subprocess.call([command], close_fds=True)
-    LOG.debug('returncode: %s', returncode)
-    return returncode
+    p = subprocess.Popen([command], stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    p.wait()
+    prefix = os.path.basename(command)
+    stdout = p.stdout.read()
+    for l in stdout.splitlines():
+        LOG.info('%s (stdout): %s', prefix, l.strip())
+    stderr = p.stderr.read()
+    for l in stderr.splitlines():
+        LOG.info('%s (stderr): %s', prefix, l.strip())
+    LOG.debug('returncode: %s', p.returncode)
+    return p.returncode
 
 
 def run_snippets(snippet_directory):
