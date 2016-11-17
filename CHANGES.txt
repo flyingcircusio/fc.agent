@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.7 (unreleased)
+1.9.7 (2016-11-17)
 ------------------
 
 - Bugfix: log stdout/stderr of prepare/finish scripts.
