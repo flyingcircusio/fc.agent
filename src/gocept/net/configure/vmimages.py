@@ -9,13 +9,15 @@ import rbd
 import requests
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 
-logger = logging.getLogger(__name__)
-
-CEPH_CLIENT = socket.gethostname()
 RELEASES = ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']
+CEPH_CLIENT = socket.gethostname()
+LOCK_COOKIE = '{}.{}'.format(CEPH_CLIENT, os.getpid())
+
+logger = logging.getLogger(__name__)
 
 
 class LockingError(Exception):
@@ -54,17 +56,24 @@ def delta_update(from_, to):
     changed blocks. Additionally, we use a stuttering technique to
     improve fairness.
     """
+    blocksize = 64 * 1024
+    total = 0
+    written = 0
     with open(from_, 'rb') as source:
         with open(to, 'r+b') as dest:
             while True:
-                a = source.read(16 * 1024)
+                a = source.read(blocksize)
                 if not a:
                     break
-                b = dest.read(16 * 1024)
+                total += 1
+                b = dest.read(blocksize)
                 if a != b:
                     dest.seek(-len(a), os.SEEK_CUR)
                     dest.write(a)
-                    time.sleep(1e-4)
+                    written += 1
+                time.sleep(1e-4)
+    logger.debug('delta_update: %d/%d 64k blocks updated (%d%%)',
+        written, total, 100 * written / (max(total, 1)))
 
 
 class BaseImage(object):
@@ -95,13 +104,16 @@ class BaseImage(object):
         # Ensure we have a lock - stop handling for this image
         # and clean up (exceptions in __enter__ do not automatically
         # cause __exit__ being called).
+        logger.debug('Locking image %s', self.image.name)
         try:
-            self.image.lock_exclusive(CEPH_CLIENT)
+            self.image.lock_exclusive(LOCK_COOKIE)
         except rbd.ImageBusy:
-            # Someone is already updating. Ignore.
-            logger.info('Image {} already locked -- update in progress '
-                        'elsewhere?'.format(self.branch))
-            raise LockingError()
+            self.force_unlock_if_dead_client()
+            try:
+                self.image.lock_exclusive(LOCK_COOKIE)
+            except Exception:
+                logger.error('Could not lock image %s', self.image.name)
+                raise LockingError()
         except rbd.ImageExists:
             # _We_ locked the image. Proceed.
             pass
@@ -109,23 +121,39 @@ class BaseImage(object):
         return self
 
     def __exit__(self, *args, **kw):
-        try:
-            if self.image_file and p.exists(self.image_file):
-                os.unlink(self.image_file)
-        except Exception:
-            logger.exception('error while removing image file %s',
-                             self.image_file)
+        if self.image_file and p.exists(self.image_file):
+            os.unlink(self.image_file)
         try:
             logger.debug('Unlocking image %s', self.branch)
-            self.image.unlock(CEPH_CLIENT)
+            self.image.unlock(LOCK_COOKIE)
         except Exception:
-            logger.exception('error while unlocking')
-        try:
-            self.image.close()
-            self.ioctx.close()
-        except Exception:
-            logger.exception('error while closing rbd connection')
+            logger.exception()
+        self.image.close()
+        self.ioctx.close()
         self.cluster.shutdown()
+
+    def force_unlock_if_dead_client(self):
+        l = self.image.list_lockers()
+        if not l:
+            return
+        logger.debug('Examining lock on image %s (%r)',
+                     self.image.name, l)
+        client, cookie, _addr = l['lockers'][0]  # excl -> max one lock
+        try:
+            otherhost, otherpid = cookie.split('.', 1)
+            otherpid = int(otherpid)
+        except (IndexError, ValueError):
+            logger.error('Failed to parse lock cookie %s', cookie)
+            raise LockingError()
+        if otherhost != CEPH_CLIENT:
+            return
+        try:
+            os.kill(otherpid, 0)
+            logger.warn('Lock held by process %d -- still alive', otherpid)
+        except OSError:
+            # no such process
+            logger.debug('Save to break lock')
+            self.image.break_lock(client, cookie)
 
     def _snapshot_names(self, image):
         return [x['name'] for x in image.list_snaps()]
@@ -197,6 +225,8 @@ class BaseImage(object):
             subprocess.check_call([
                 'qemu-img', 'convert', '-n', '-fqcow2', self.image_file,
                 '-Oraw', bounce.name])
+            os.unlink(self.image_file)
+            self.image_file = None
             bounce.seek(0)
             with self.mapped() as blockdev:
                 delta_update(bounce.name, blockdev)
@@ -279,7 +309,15 @@ class BaseImage(object):
 
 
 def update():
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    try:
+        if int(os.environ.get('VERBOSE', 0)):
+            level = logging.DEBUG
+        else:
+            level = logging.INFO
+    except Exception:
+        level = logging.INFO
+
+    logging.basicConfig(level=level, format='%(message)s')
     logging.getLogger("requests").setLevel(logging.WARNING)
     try:
         for branch in RELEASES:
@@ -287,9 +325,8 @@ def update():
             with BaseImage(branch) as image:
                 image.update()
     except LockingError:
-        # This is expected and should be silent. Someone else is updating
-        # this branch at the moment.
-        logging.debug('Failed to acquire lock')
+        sys.exit(1)
     except Exception:
         logger.exception(
             "An error occured while updating branch `{}`".format(branch))
+        sys.exit(1)
