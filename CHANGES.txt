@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.8 (unreleased)
+1.9.8 (2016-12-15)
 ------------------
 
 - Fix locking error in VM charging (#25145).
