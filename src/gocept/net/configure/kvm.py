@@ -5,13 +5,12 @@ Most of this code has been migrated to Consul-triggered fc.qemu stuff.
 
 import glob
 import gocept.net.directory
-import multiprocessing
+from multiprocessing.pool import ThreadPool
 import os
 import os.path
 import shutil
 import subprocess
 import sys
-import time
 
 
 VERBOSE = os.environ.get('VERBOSE', False)
@@ -44,7 +43,7 @@ class VM(object):
         if VERBOSE:
             cmd[1:1] = ['-v']
             print('calling: ' + ' '.join(cmd))
-        subprocess.check_call(cmd, close_fds=True)
+        return subprocess.call(cmd, close_fds=True)
 
 
 def delete_configs():
@@ -59,16 +58,14 @@ def delete_configs():
 
 def ensure_vms():
     """Scrub VM status periodically"""
-    procs = []
+    results = []
+    pool = ThreadPool(5)
     for cfg in glob.glob('/etc/qemu/vm/*.cfg'):
         vm = VM(os.path.basename(cfg).rsplit('.', 1)[0])
-        proc = multiprocessing.Process(target=vm.ensure, name=vm.name)
-        procs.append(proc)
-        proc.start()
-        time.sleep(0.1)
-    for p in procs:
-        p.join(4 * 3600)
-    exitcodes = [p.exitcode for p in procs] or (0,)
+        results.append(pool.apply_async(vm.ensure))
+    pool.close()
+    pool.join()
+    exitcodes = [x.get() for x in results] or (0,)
 
     # Normally VMs should have been shut down already when we delete the config
     # but doing this last also gives a chance this still happening right

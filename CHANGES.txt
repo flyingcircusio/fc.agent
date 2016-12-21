@@ -4,7 +4,18 @@ Changelog
 1.9.9 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Improve resource usage of VM config scrubbing: we did not limit the number
+  of subprocess of "fc-qemu ensure" that we were spawning.
+
+  We only limited the rate of spawns per second. At some points we saw VM
+  servers to get overloaded by a) using multiprocessing.Process that creates
+  superfluous forks and b) when the host was busy the actual fc.qemu
+  subprocesses where spawned faster than the host could work on them. That lead
+  to a very "interesting" behaviour of memory usage where suddenly a lot of
+  processes were pushed into swap.
+
+  We now a) do not create superfluous forks and b) limit to at most 5 fc.qemu
+  instances at a time.
 
 
 1.9.8 (2016-12-15)
