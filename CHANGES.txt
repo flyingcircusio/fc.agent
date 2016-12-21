@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.9 (unreleased)
+1.9.9 (2016-12-21)
 ------------------
 
 - Improve resource usage of VM config scrubbing: we did not limit the number
