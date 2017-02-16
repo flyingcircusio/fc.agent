@@ -53,9 +53,12 @@ def cluster(monkeypatch):
 
 @pytest.fixture
 def pools(cluster, monkeypatch):
-    monkeypatch.setattr(gocept.net.ceph.pools.Pools, 'names', set(['node']))
-    images = {}
+    monkeypatch.setattr(gocept.net.ceph.pools.Pools, 'names',
+                        lambda self: set(['rbd.hdd', 'rbd.ssd']))
+    images_hdd = {}
+    images_ssd = {}
     for node in range(5):
+        images = images_hdd if node % 2 else images_ssd
         name = 'node0{}'.format(node)
         images['{}.root'.format(name)] = RBDImage(
             '{}.root'.format(name), 100)
@@ -65,8 +68,9 @@ def pools(cluster, monkeypatch):
             '{}.swap'.format(name), 100)
         images['{}.tmp'.format(name)] = RBDImage(
             '{}.tmp'.format(name), 100)
-    monkeypatch.setattr(gocept.net.ceph.pools.Pool, 'load',
-                        lambda self: images)
+    monkeypatch.setattr(
+        gocept.net.ceph.pools.Pool, 'load',
+        lambda self: images_hdd if self.name == 'rbd.hdd' else images_ssd)
     return gocept.net.ceph.pools.Pools(cluster)
 
 
@@ -76,21 +80,13 @@ def test_node_deletion(fake_directory, cluster, pools):
 
     assert cluster.rbd.call_args_list == [
         # hard
-        mock.call(['snap', 'rm', 'node/node03.root@snap1']),
-        mock.call(['rm', 'node/node03.root']),
-        mock.call(['rm', 'node/node03.swap']),
-        mock.call(['rm', 'node/node03.tmp']),
+        mock.call(['snap', 'rm', 'rbd.hdd/node03.root@snap1']),
+        mock.call(['rm', 'rbd.hdd/node03.root']),
+        mock.call(['rm', 'rbd.hdd/node03.swap']),
+        mock.call(['rm', 'rbd.hdd/node03.tmp']),
         # purge
-        mock.call(['snap', 'rm', 'node/node04.root@snap1']),
-        mock.call(['rm', 'node/node04.root']),
-        mock.call(['rm', 'node/node04.swap']),
-        mock.call(['rm', 'node/node04.tmp']),
+        mock.call(['snap', 'rm', 'rbd.ssd/node04.root@snap1']),
+        mock.call(['rm', 'rbd.ssd/node04.root']),
+        mock.call(['rm', 'rbd.ssd/node04.swap']),
+        mock.call(['rm', 'rbd.ssd/node04.tmp']),
     ]
-
-
-def test_node_deletion_missing_pool(fake_directory, cluster, monkeypatch):
-    monkeypatch.setattr(gocept.net.ceph.pools.Pool, 'load',
-                        mock.MagicMock(side_effect=KeyError('does not exist')))
-    v = VolumeDeletions(fake_directory, cluster)
-    v.ensure()
-    assert cluster.rbd.call_args_list == []

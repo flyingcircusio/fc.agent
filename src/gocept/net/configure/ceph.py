@@ -5,12 +5,10 @@ from __future__ import print_function
 from ..ceph import Pools, Cluster
 import argparse
 import gocept.net.directory
-import math
-import random
 
 
 class ResourcegroupPoolEquivalence(object):
-    """Ensure that requires Ceph pools exist."""
+    """Ensure that required Ceph pools exist."""
 
     REQUIRED_POOLS = ['rbd', 'data', 'metadata', 'rbd.hdd']
 
@@ -39,15 +37,15 @@ class VolumeDeletions(object):
     def ensure(self):
         deletions = self.directory.deletions('vm')
         for name, node in deletions.items():
-            # This really depends on the VM names adhering to our policy of
-            # <rg>[0-9]{2}
-            pool = self.pools[name[:-2]]
-            try:
-                images = list(pool.images)
-            except KeyError:
-                # The pool doesn't exist. Ignore. Nothing to delete anyway.
+            if 'hard' not in node['stages']:
                 continue
-            if 'hard' in node['stages']:
+            for pool in self.pools:
+                try:
+                    images = list(pool.images)
+                except KeyError:
+                    # The pool doesn't exist. Ignore. Nothing to delete anyway.
+                    continue
+
                 for image in ['{}.root', '{}.swap', '{}.tmp']:
                     image = image.format(name)
                     base_image = None
@@ -58,11 +56,12 @@ class VolumeDeletions(object):
                             base_image = rbd_image
                             continue
                         # This is a snapshot of the volume itself.
-                        print("Purging snapshot {}".format(image))
+                        print("Purging snapshot {}/{}@{}".format(
+                              pool.name, image, rbd_image.snapshot))
                         pool.snap_rm(rbd_image)
                     if base_image is None:
                         continue
-                    print("Purging volume {}".format(image))
+                    print("Purging volume {}/{}".format(pool.name, image))
                     pool.image_rm(base_image)
 
 

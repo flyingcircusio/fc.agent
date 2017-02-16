@@ -4,7 +4,10 @@ Changelog
 1.9.10 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Fix VM Ceph image deletion. This was forgotten to be updated when we moved
+  from RG-specific pools to pools that reflect the underlying storage
+  technology. The new code hunts down all images of a VM, potentially in all
+  pools.
 
 
 1.9.9 (2016-12-21)
