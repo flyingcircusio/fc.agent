@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.10 (unreleased)
+1.9.10 (2017-03-09)
 -------------------
 
 - Fix VM Ceph image deletion. This was forgotten to be updated when we moved
