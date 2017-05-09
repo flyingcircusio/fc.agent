@@ -182,6 +182,7 @@ class BaseImage(object):
             raise ValueError(
                 "Image had checksum {} but expected {}. "
                 "Aborting.".format(image_hash, checksum))
+        return True
 
     def image_size(self):
         # Expects self.image_file to have been downloaded and verified.
@@ -237,6 +238,7 @@ class BaseImage(object):
         # Check whether the expected snapshot already exists.
         snapshot_name = 'base-{}'.format(release)
         current_snapshots = self._snapshot_names(self.image)
+
         if snapshot_name in self._snapshot_names(self.image):
             # All good. No need to update.
             return
@@ -244,7 +246,12 @@ class BaseImage(object):
         logger.info('\tHave releases: \n\t\t{}'.format(
             '\n\t\t'.join(current_snapshots)))
         logger.info('\tDownloading release {}'.format(release))
-        self.download_image(release_url)
+        try:
+            self.download_image(release_url)
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                logger.warn('Ignoring missing image. Hydra was probably lazy.')
+                return False
 
         logger.info('\tStoring in volume {}/{}'.format(
             self.image_pool, self.branch))

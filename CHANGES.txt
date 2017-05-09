@@ -4,7 +4,7 @@ Changelog
 1.9.11 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Make vmimage download code more robust if encountering a 404. Hydra doesn't necessarily always provide an image and we're fine with that. We just keep using an older version that is still good. (#26700)
 
 
 1.9.10 (2017-03-09)
