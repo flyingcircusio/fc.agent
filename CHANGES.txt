@@ -4,7 +4,7 @@ Changelog
 1.9.12 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Also configure output RG firewall rules to relieve conntrack table overload.
 
 
 1.9.11 (2017-05-24)

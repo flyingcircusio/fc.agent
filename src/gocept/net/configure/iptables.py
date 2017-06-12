@@ -12,9 +12,13 @@ import subprocess
 class Iptables(object):
     """iptables input rules configuration."""
 
-    RULESFILES = {
+    INPUT = {
         4: '/var/lib/iptables/rules.d/filter/INPUT/40resourcegroup',
         6: '/var/lib/ip6tables/rules.d/filter/INPUT/40resourcegroup'}
+
+    OUTPUT = {
+        4: '/var/lib/iptables/rules.d/filter/OUTPUT/40resourcegroup',
+        6: '/var/lib/ip6tables/rules.d/filter/OUTPUT/40resourcegroup'}
 
     def __init__(self, location, rg, iface, vlan):
         """Create Iptables configuration for iface with location and vlan."""
@@ -31,13 +35,24 @@ class Iptables(object):
                 if node['rg'] == self.rg:
                     yield netaddr.IPNetwork(node['addr']).ip
 
-    def write_rg_input_rules(self):
+    def write_rg_input_rules(self, addrs):
         """Put one accept rule per IP address into version-specific config."""
         rulesfiles = {}
-        for ipversion, filename in self.RULESFILES.items():
+        for ipversion, filename in self.INPUT.items():
             rulesfiles[ipversion] = ConfigFile(filename)
-        for addr in self.rg_addresses():
+        for addr in addrs:
             rule = '-A INPUT -i {0} -s {1} -j ACCEPT'.format(self.iface, addr)
+            print(rule, file=rulesfiles[addr.version])
+        for f in rulesfiles.values():
+            f.commit()
+
+    def write_rg_output_rules(self, addrs):
+        """Put one accept rule per IP address into version-specific config."""
+        rulesfiles = {}
+        for ipversion, filename in self.OUTPUT.items():
+            rulesfiles[ipversion] = ConfigFile(filename)
+        for addr in addrs:
+            rule = '-A OUTPUT -o {0} -d {1} -j ACCEPT'.format(self.iface, addr)
             print(rule, file=rulesfiles[addr.version])
         for f in rulesfiles.values():
             f.commit()
@@ -56,11 +71,13 @@ class Iptables(object):
         subprocess.check_call(['/usr/local/sbin/update-iptables'])
 
     def run(self):
-        self.write_rg_input_rules()
+        addrs = list(self.rg_addresses())
+        self.write_rg_input_rules(addrs)
+        self.write_rg_output_rules(addrs)
         self.reload_iptables()
 
 
-def inputrules():
+def rules():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('location', metavar='LOCATION',
                    help='short location identifier (e.g., rzob)')

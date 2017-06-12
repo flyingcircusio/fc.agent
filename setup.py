@@ -45,8 +45,7 @@ system configuration.
             'localconfig-box-mounts = gocept.net.configure.box:mounts',
             'localconfig-ceph-volumes = gocept.net.configure.ceph:volumes',
             'localconfig-dhcpd = gocept.net.configure.dhcpd:main',
-            'localconfig-iptables-inputrules'
-            ' = gocept.net.configure.iptables:inputrules',
+            'localconfig-iptables-rules = gocept.net.configure.iptables:rules',
             'localconfig-kibana = gocept.net.configure.kibana:main',
             'localconfig-kvm-init = gocept.net.configure.kvm:ensure_vms',
             'localconfig-nagios-nodes = gocept.net.configure.nagios:nodes',
