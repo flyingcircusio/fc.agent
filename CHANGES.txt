@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.13 (unreleased)
+1.9.13 (2017-08-01)
 -------------------
 
 - Update hostmaster address (#16370).
