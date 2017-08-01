@@ -4,7 +4,7 @@ Changelog
 1.9.13 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Update hostmaster address (#16370).
 
 
 1.9.12 (2017-06-12)
