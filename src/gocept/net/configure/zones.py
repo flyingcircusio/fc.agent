@@ -117,7 +117,7 @@ $ORIGIN {origin}.
         for ns in self.parent.nameservers:
             res.append(32 * ' ' + 'NS      {}.\n'.format(ns))
         res.append('$TTL {}\n'.format(self.parent.ttl))
-        for rr in self.records:
+        for rr in sorted(self.records):
             res.append('{:<31s} {:<7s} {}\n'.format(
                 rr.label, rr.rtype, rr.value))
         for includefile in self.include:

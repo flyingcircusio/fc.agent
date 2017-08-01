@@ -5,6 +5,7 @@ Changelog
 -------------------
 
 - Update hostmaster address (#16370).
+- Stabilize DNS record sort order (#16370).
 
 
 1.9.12 (2017-06-12)
