@@ -25,6 +25,7 @@ system configuration.
         'configobj>=4.7',
         'ipaddress>=1.0',
         'iso8601==0.1.10',
+        'lz4',
         'nagiosplugin',
         'netaddr>=0.7',
         'pytest',

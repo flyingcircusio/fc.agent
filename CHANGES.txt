@@ -4,7 +4,7 @@ Changelog
 1.9.14 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- VM image charging: use LZ4 compressed images.
 
 
 1.9.13 (2017-08-01)

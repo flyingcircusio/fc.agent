@@ -1,7 +1,7 @@
-import bz2
 import contextlib
 import hashlib
 import logging
+import lz4.frame
 import os
 import os.path as p
 import rados
@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 
+HYDRA_BRANCH_URL = 'https://hydra.flyingcircus.io/channels/branches/{}'
 RELEASES = ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']
 CEPH_CLIENT = socket.gethostname()
 LOCK_COOKIE = '{}.{}'.format(CEPH_CLIENT, os.getpid())
@@ -24,28 +25,37 @@ class LockingError(Exception):
     pass
 
 
-def download_and_uncompress_file(url):
+# guess initial size, might be too small
+zero_page = '\0' * 65536
+
+def sparse_write(data, fobj):
+    global zero_page
+    if len(data) > len(zero_page):
+        zero_page = '\0' * len(data)
+    if data == zero_page:
+        fobj.seek(len(data), os.SEEK_CUR)
+    else:
+        fobj.write(data)
+
+
+def download_and_uncompress(url):
     logging.debug('\t\tGet %s', url)
     r = requests.get(url, stream=True)
     r.raise_for_status()
-    decomp = bz2.BZ2Decompressor()
     sha256 = hashlib.sha256()
-    with tempfile.NamedTemporaryFile(mode='wb', suffix='.bz2',
-                                     prefix='vm-image.', delete=False) as f:
-        for bz2chunk in r.iter_content(chunk_size=64 * 1024):
-            if not bz2chunk:
-                # filter out keep-alive chunk borders
-                continue
-            sha256.update(bz2chunk)
-            try:
-                chunk = decomp.decompress(bz2chunk)
-                if chunk:
-                    f.write(chunk)
-            except EOFError:
-                break
-        f.flush()
-        logging.debug('\t\tSaving to %s', f.name)
-        return f.name, sha256.hexdigest()
+    with lz4.frame.LZ4FrameDecompressor() as decomp:
+        with tempfile.NamedTemporaryFile(
+                mode='wb', prefix='vm-image.', suffix='.qcow2',
+                delete=False) as f:
+            logging.debug('\t\tSaving to %s', f.name)
+            for chunk in r.iter_content(chunk_size=8192):
+                if not len(chunk):
+                    # filter out keep-alive chunk borders
+                    continue
+                sha256.update(chunk)
+                sparse_write(decomp.decompress(chunk), f)
+            f.flush()
+            return f.name, sha256.hexdigest()
 
 
 def delta_update(from_, to):
@@ -78,7 +88,6 @@ def delta_update(from_, to):
 
 class BaseImage(object):
 
-    hydra_branch_url = 'https://hydra.flyingcircus.io/channels/branches/{}'
     image_pool = 'rbd.hdd'
     image_file = None
 
@@ -165,7 +174,7 @@ class BaseImage(object):
         # finishing in the middle won't have race conditions with us
         # sending multiple requests.
         release = requests.get(
-            self.hydra_branch_url.format(self.branch),
+            HYDRA_BRANCH_URL.format(self.branch),
             allow_redirects=False)
         assert release.status_code in [301, 302], release.status_code
         release_url = release.headers['Location']
@@ -173,8 +182,8 @@ class BaseImage(object):
         return release_id, release_url
 
     def download_image(self, release_url):
-        image_url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.bz2'
-        self.image_file, image_hash = download_and_uncompress_file(image_url)
+        image_url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.lz4'
+        self.image_file, image_hash = download_and_uncompress(image_url)
         checksum = requests.get(image_url + '.sha256')
         checksum.raise_for_status()
         checksum = checksum.text.strip()
@@ -219,7 +228,9 @@ class BaseImage(object):
         doesn't work under some circumstances, like the image
         already existing etc.
         """
-        with tempfile.NamedTemporaryFile(prefix='vm-bounce.') as bounce:
+        with tempfile.NamedTemporaryFile(
+                prefix='vm-image.', suffix='.raw') as bounce:
+            logger.debug('\t\tConverting image to %s', bounce.name)
             size = self.image_size()
             self.image.resize(size)
             bounce.truncate(size)
@@ -261,7 +272,6 @@ class BaseImage(object):
         logger.info('\tCreating snapshot {}'.format(snapshot_name))
         self.image.create_snap(snapshot_name)
         self.image.protect_snap(snapshot_name)
-        self.flatten()
         self.purge()
 
     def flatten(self):
@@ -282,6 +292,7 @@ class BaseImage(object):
                 finally:
                     image.close()
                     pool.close()
+                time.sleep(10)  # give Ceph a bit room to breathe
 
     def purge(self):
         """
@@ -331,6 +342,7 @@ def update():
             logger.info('Updating branch {}'.format(branch))
             with BaseImage(branch) as image:
                 image.update()
+                image.flatten()
     except LockingError:
         sys.exit(1)
     except Exception:
