@@ -25,37 +25,60 @@ class LockingError(Exception):
     pass
 
 
-# guess initial size, might be too small
-zero_page = '\0' * 65536
+def download_and_uncompress(url, filename):
+    """Writes download content sparesely into `filename`.
 
-def sparse_write(data, fobj):
-    global zero_page
-    if len(data) > len(zero_page):
-        zero_page = '\0' * len(data)
-    if data == zero_page:
-        fobj.seek(len(data), os.SEEK_CUR)
-    else:
-        fobj.write(data)
+    Shells out to `dd` to get double-buffering and sparse files for free.
 
-
-def download_and_uncompress(url):
+    Returns the download's SHA256 checksum.
+    """
     logging.debug('\t\tGet %s', url)
     r = requests.get(url, stream=True)
     r.raise_for_status()
     sha256 = hashlib.sha256()
     with lz4.frame.LZ4FrameDecompressor() as decomp:
-        with tempfile.NamedTemporaryFile(
-                mode='wb', prefix='vm-image.', suffix='.qcow2',
-                delete=False) as f:
-            logging.debug('\t\tSaving to %s', f.name)
-            for chunk in r.iter_content(chunk_size=8192):
+        logging.debug('\t\tSaving to %s', filename)
+        p = subprocess.Popen(
+            ['dd', 'of={}'.format(filename), 'conv=sparse', 'bs=8k'],
+            stdin=subprocess.PIPE)
+        try:
+            for chunk in r.iter_content(chunk_size=64 * 1024):
                 if not len(chunk):
                     # filter out keep-alive chunk borders
                     continue
+                p.stdin.write(decomp.decompress(chunk))
                 sha256.update(chunk)
-                sparse_write(decomp.decompress(chunk), f)
-            f.flush()
-            return f.name, sha256.hexdigest()
+        finally:
+            p.stdin.close()
+            if p.wait() != 0:
+                raise RuntimeError('failed to write out image')
+    return sha256.hexdigest()
+
+
+def download_image(release_url, filename):
+    image_url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.lz4'
+    image_hash = download_and_uncompress(image_url, filename)
+    checksum = requests.get(image_url + '.sha256')
+    checksum.raise_for_status()
+    checksum = checksum.text.strip()
+    if image_hash != checksum:
+        raise ValueError(
+            "Image had checksum {} but expected {}. "
+            "Aborting.".format(image_hash, checksum))
+
+
+def qemu_image_size(image_file):
+    info = subprocess.check_output(
+        ['qemu-img', 'info', image_file])
+    for line in info.decode('ascii').splitlines():
+        line = line.strip()
+        if line.startswith('virtual size:'):
+            size = line.split()[3]
+            assert size.startswith('(')
+            size = int(size[1:])
+            break
+    assert size > 0
+    return size
 
 
 def delta_update(from_, to):
@@ -78,7 +101,7 @@ def delta_update(from_, to):
                 total += 1
                 b = dest.read(blocksize)
                 if a != b:
-                    dest.seek(-len(a), os.SEEK_CUR)
+                    dest.seek(-len(b), os.SEEK_CUR)
                     dest.write(a)
                     written += 1
                 time.sleep(1e-4)
@@ -89,7 +112,6 @@ def delta_update(from_, to):
 class BaseImage(object):
 
     image_pool = 'rbd.hdd'
-    image_file = None
 
     def __init__(self, branch):
         self.branch = branch
@@ -130,8 +152,6 @@ class BaseImage(object):
         return self
 
     def __exit__(self, *args, **kw):
-        if self.image_file and p.exists(self.image_file):
-            os.unlink(self.image_file)
         try:
             logger.debug('Unlocking image %s', self.branch)
             self.image.unlock(LOCK_COOKIE)
@@ -181,32 +201,6 @@ class BaseImage(object):
         release_id = p.basename(release_url)
         return release_id, release_url
 
-    def download_image(self, release_url):
-        image_url = release_url + '/fc-vm-base-image-x86_64-linux.qcow2.lz4'
-        self.image_file, image_hash = download_and_uncompress(image_url)
-        checksum = requests.get(image_url + '.sha256')
-        checksum.raise_for_status()
-        checksum = checksum.text.strip()
-        if image_hash != checksum:
-            raise ValueError(
-                "Image had checksum {} but expected {}. "
-                "Aborting.".format(image_hash, checksum))
-        return True
-
-    def image_size(self):
-        # Expects self.image_file to have been downloaded and verified.
-        info = subprocess.check_output(
-            ['qemu-img', 'info', self.image_file])
-        for line in info.decode('ascii').splitlines():
-            line = line.strip()
-            if line.startswith('virtual size:'):
-                size = line.split()[3]
-                assert size.startswith('(')
-                size = int(size[1:])
-                break
-        assert size > 0
-        return size
-
     @property
     def volume(self):
         return '{}/{}'.format(self.image_pool, self.branch)
@@ -221,25 +215,24 @@ class BaseImage(object):
         finally:
             subprocess.check_call(['rbd', '--id', CEPH_CLIENT, 'unmap', dev])
 
-    def store_in_ceph(self):
-        """Updates image data.
+    def store_in_ceph(self, qcow2):
+        """Updates image data from `qcow2` fobj.
 
         qemu-img can convert directly to rbd, however, this
         doesn't work under some circumstances, like the image
         already existing etc.
         """
         with tempfile.NamedTemporaryFile(
-                prefix='vm-image.', suffix='.raw') as bounce:
+                prefix='vm-image.', suffix='.raw', dir='/var/tmp') as bounce:
             logger.debug('\t\tConverting image to %s', bounce.name)
-            size = self.image_size()
-            self.image.resize(size)
-            bounce.truncate(size)
+            expected_size = qemu_image_size(qcow2.name)
             subprocess.check_call([
-                'qemu-img', 'convert', '-n', '-fqcow2', self.image_file,
-                '-Oraw', bounce.name])
-            os.unlink(self.image_file)
-            self.image_file = None
-            bounce.seek(0)
+                'qemu-img', 'convert', qcow2.name, '-Oraw', bounce.name])
+            size = os.stat(bounce.name).st_size
+            if size != expected_size:
+                raise RuntimeError('raw image is not of expected size',
+                        size, expected_size)
+            self.image.resize(size)
             with self.mapped() as blockdev:
                 delta_update(bounce.name, blockdev)
 
@@ -257,22 +250,23 @@ class BaseImage(object):
         logger.info('\tHave releases: \n\t\t{}'.format(
             '\n\t\t'.join(current_snapshots)))
         logger.info('\tDownloading release {}'.format(release))
-        try:
-            self.download_image(release_url)
-        except requests.HTTPError as e:
-            if e.response is not None and e.response.status_code == 404:
-                logger.warn('Ignoring missing image. Hydra was probably lazy.')
-                return False
+        with tempfile.NamedTemporaryFile(
+                mode='w+b', prefix='vm-image.', suffix='.qcow2') as qcow2:
+            try:
+                download_image(release_url, qcow2.name)
+            except requests.HTTPError as e:
+                if e.response is not None and e.response.status_code == 404:
+                    logger.warn('Image not found on Hydra. Ignoring.')
+                    return False
 
-        logger.info('\tStoring in volume {}/{}'.format(
-            self.image_pool, self.branch))
-        self.store_in_ceph()
+            logger.info('\tStoring in volume {}/{}'.format(
+                self.image_pool, self.branch))
+            self.store_in_ceph(qcow2)
 
         # Create new snapshot and protect it so we can clone from it.
         logger.info('\tCreating snapshot {}'.format(snapshot_name))
         self.image.create_snap(snapshot_name)
         self.image.protect_snap(snapshot_name)
-        self.purge()
 
     def flatten(self):
         """Decouple VMs created from their base snapshots."""
@@ -292,7 +286,7 @@ class BaseImage(object):
                 finally:
                     image.close()
                     pool.close()
-                time.sleep(10)  # give Ceph a bit room to breathe
+                time.sleep(10)  # give Ceph room catch up with I/O
 
     def purge(self):
         """
@@ -343,6 +337,7 @@ def update():
             with BaseImage(branch) as image:
                 image.update()
                 image.flatten()
+                image.purge()
     except LockingError:
         sys.exit(1)
     except Exception:
