@@ -6,10 +6,8 @@ setup(
     author='Flying Circus',
     author_email='mail@flyingcircus.io',
     url='http://bitbucket.org/flyingcircus/fc.agent',
-    description="""\
-Local configuration utilities and helper APIs for flyingcircus.io
-system configuration.
-""",
+    description=('Local configuration utilities and helper APIs for '
+                 'flyingcircus.io system configuration.'),
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
