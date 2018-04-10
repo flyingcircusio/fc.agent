@@ -4,7 +4,8 @@ Changelog
 1.10.1 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Allow local include files for DHCP configuration, e.g.,
+  `/etc/dhcp/local/dhcpd6.srv.in` (#100669).
 
 
 1.10.0 (2018-04-04)

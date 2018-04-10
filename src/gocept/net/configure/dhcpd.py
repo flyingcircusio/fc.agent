@@ -1,16 +1,29 @@
-# Copyright (c) gocept gmbh & co. kg
-# See also LICENSE.txt
-
 """Create dhcpd configuration based on directory data."""
 
 from __future__ import print_function
-
 from gocept.net.directory import Directory, exceptions_screened
+
 import gocept.net.configfile
 import gocept.net.dhcp
 import netaddr
 import optparse
+import os.path as p
 import sys
+
+
+def include(files):
+    """Get each readable include file into the output.
+
+    For the sake of robustness, it is not an error to specify
+    non-existent include files. This way, a "search path" of include
+    files can be specified on the command line.
+    """
+    for includefile in files:
+        try:
+            with open(includefile, 'rb') as f:
+                yield f.read()
+        except EnvironmentError:
+            pass
 
 
 class HostsFormatter(object):
@@ -77,13 +90,8 @@ class Hosts6Formatter(HostsFormatter):
 class NetworkFormatter(object):
     """Render a shared network containing subnets as string."""
 
-    # statements and options present in every "subnet" clause
-    common_subnet_options = """\
-        authoritative;
-"""
-
     @staticmethod
-    def new(ipversion, sharednetwork, networkname):
+    def new(ipversion, sharednetwork, networkname, include_dir):
         """Factory that creates suitable shared network formatter.
 
         `ipversion` is the IP protocol version. `sharednetwork` is the
@@ -91,22 +99,35 @@ class NetworkFormatter(object):
         used as network identifier in the "shared-network" clause.
         """
         if ipversion == 4:
-            return Network4Formatter(sharednetwork, networkname)
+            return Network4Formatter(sharednetwork, networkname, include_dir)
         elif ipversion == 6:
-            return Network6Formatter(sharednetwork, networkname)
+            return Network6Formatter(sharednetwork, networkname, include_dir)
         raise NotImplementedError('unsupported IP version', ipversion)
 
-    def __init__(self, sharednetwork, networkname):
+    def __init__(self, sharednetwork, networkname, include_dir):
         self.sharednetwork = sharednetwork
         self.networkname = networkname
+        self.include_dir = include_dir
 
-    def render_subnet(self, subnet):
-        raise NotImplementedError
+    @property
+    def local_include_file(self):
+        return p.join(self.include_dir, '{}.{}.in'.format(
+            self.include_prefix, self.networkname))
 
     def __str__(self):
-        """Render a SharedNetwork as string."""
-        out = ['shared-network {0} {{\n'.format(self.networkname)]
-        out += [self.render_subnet(subnet) for subnet in self.sharednetwork]
+        out = []
+        if self.include_dir:
+            try:
+                with open(self.local_include_file) as f:
+                    out += [
+                        '# included from {}\n'.format(self.local_include_file),
+                        f.read() + '\n'
+                    ]
+                    return ''.join(out)
+            except EnvironmentError:
+                pass
+        out.append('shared-network {0} {{\n'.format(self.networkname))
+        out += [self.render_template(subnet) for subnet in self.sharednetwork]
         out.append('}\n\n')
         return ''.join(out)
 
@@ -114,16 +135,18 @@ class NetworkFormatter(object):
 class Network4Formatter(NetworkFormatter):
     """IPv4-specific details of NetworkFormatter."""
 
-    def render_subnet(self, subnet):
+    include_prefix = 'dhcpd'
+
+    def render_template(self, subnet):
         """Render IPv4 subnet clause."""
         return """\
     subnet {0} netmask {1} {{
 {2}        option subnet-mask {1};
         option routers {3};
-{4}    }}
+        authoritative;
+    }}
 """.format(subnet.network.ip, subnet.network.netmask,
-           self._dynamicrange(subnet), self._router(subnet),
-           self.common_subnet_options)
+           self._dynamicrange(subnet), self._router(subnet))
 
     def _dynamicrange(self, subnet):
         """Address range that is availabe for dynamic allocation."""
@@ -151,13 +174,15 @@ class Network4Formatter(NetworkFormatter):
 class Network6Formatter(NetworkFormatter):
     """IPv6-specific details of NetworkFormatter."""
 
-    def render_subnet(self, subnet):
+    include_prefix = 'dhcpd6'
+
+    def render_template(self, subnet):
         """Render IPv6 subnet6 clause."""
         return """\
     subnet6 {0} {{
-{1}{2}    }}
-""".format(subnet.network, self._dynamicrange(subnet),
-           self.common_subnet_options)
+{1}        authoritative;
+    }}
+""".format(subnet.network, self._dynamicrange(subnet))
 
     def _dynamicrange(self, subnet):
         """Grab a random portion of the address space with 31331 name :-)"""
@@ -212,21 +237,7 @@ class DHCPd(object):
                 continue
             self.hosts.add(hostaddr)
 
-    def _render_includes(self, includes):
-        """Get each readable include file into the output.
-
-        For the sake of robustness, it is not an error to specify
-        non-existent include files. This way, a "search path" of include
-        files can be specified on the command line.
-        """
-        for includefile in includes:
-            try:
-                with open(includefile, 'rb') as f:
-                    yield f.read()
-            except EnvironmentError:
-                pass
-
-    def render(self, includes=None):
+    def render(self, includes=None, inc_dir=None):
         """Assemble complete dhcpd.conf configuration file.
 
         `includes` is a list of static includes which are read in listed
@@ -234,8 +245,8 @@ class DHCPd(object):
         StringIO object with the rendered configuration file.
         """
         out = ['# auto-generated by localconfig-dhcpd\n\n']
-        out += self._render_includes(includes or [])
-        out += [str(NetworkFormatter.new(self.ipversion, shnet, vlan))
+        out += include(includes or [])
+        out += [str(NetworkFormatter.new(self.ipversion, shnet, vlan, inc_dir))
                 for vlan, shnet in sorted(self.networks.iteritems())]
         out.append(str(HostsFormatter.new(self.ipversion, self.hosts)))
         return ''.join(out)
@@ -262,6 +273,9 @@ return 2 to signal the the output file has been changed.""")
                     default=[],
                     help='include static file at the beginning of the '
                     'configuration; option may be given multiple times')
+    optp.add_option('-l', '--local-include-dir', metavar='DIR', default=None,
+                    help='look up override files for specific networks in this '
+                    'directory (format: dhcp{,6}.${vlan}.in)')
     optp.add_option('-o', '--output', metavar='FILE', default=None,
                     help='write configuration to FILE instead of stdout')
     options, args = optp.parse_args()
@@ -279,7 +293,7 @@ def main():
         dhcpd.query_directory()
     if options.output:
         conffile = gocept.net.configfile.ConfigFile(options.output)
-        conffile.write(dhcpd.render(options.include))
+        conffile.write(dhcpd.render(options.include, options.local_include_dir))
         changed = conffile.commit()
     else:
         sys.stdout.write(dhcpd.render(options.include))

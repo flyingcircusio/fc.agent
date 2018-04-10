@@ -23,7 +23,7 @@ setup(
         'configobj>=4.7',
         'ipaddress>=1.0',
         'iso8601==0.1.10',
-        'lz4>=1.1',
+        'lz4>=1.0',
         'nagiosplugin',
         'netaddr>=0.7',
         'pytest',
