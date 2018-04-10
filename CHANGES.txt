@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.1 (unreleased)
+1.10.1 (2018-04-10)
 -------------------
 
 - Allow local include files for DHCP configuration, e.g.,
