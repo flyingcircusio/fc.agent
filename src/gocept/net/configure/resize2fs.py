@@ -39,11 +39,17 @@ class Disk(object):
 
     def grow_partition(self):
         partx = subprocess.check_output(['partx', '-r', self.dev]).decode()
-        first_sector = partx.splitlines()[1].split()[1]
-        subprocess.check_call([
-            'sgdisk', self.dev, '-d', '1',
-            '-n', '1:{}:0'.format(first_sector), '-c', '1:root',
-            '-t', '1:8300'])
+        for line in partx.splitlines():
+            (npart, first, _last, _sectors, _size, name, _uuid) = line.split()
+            if npart == '1' and first in ('4096', '8192') and name == 'root':
+                subprocess.check_call([
+                    'sgdisk', self.dev, '-d', '1',
+                    '-n', '1:{}:0'.format(first), '-c', '1:root',
+                    '-t', '1:8300'])
+                return
+        raise RuntimeError('Could not resize partition', partx)
+
+
 
     def resize_partition(self):
         partx = subprocess.check_output(['partx', '-r', self.dev]).decode()
