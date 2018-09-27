@@ -146,7 +146,7 @@ class BackyConfig(object):
             node_dir = self.prefix + p.join(BASEDIR, name)
             if p.exists(node_dir):
                 _log.info('purging backups for deleted node %s', name)
-                shutil.rmtree(node_dir)
+                shutil.rmtree(node_dir, ignore_errors=True)
 
 
 def configure():
