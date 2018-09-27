@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.2 (unreleased)
+1.10.2 (2018-09-27)
 -------------------
 
 - Ignore errors while purging old backup directories (#106478).
