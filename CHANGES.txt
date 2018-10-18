@@ -4,7 +4,7 @@ Changelog
 1.10.4 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Filesystem resize: cope with unusual partition layouts (#106759).
 
 
 1.10.3 (2018-10-10)
