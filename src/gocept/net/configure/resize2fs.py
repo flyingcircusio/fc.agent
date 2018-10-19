@@ -14,56 +14,65 @@ class Disk(object):
     # The actual sizing of the disk is delegated to the KVM host management
     # utilities and happens independently.
 
-    # 5G disk size granularity -> 2.5G sampling -> 512 byte sectors
-    FREE_SECTOR_THRESHOLD = (5 * (1024 * 1024 * 1024) / 2) / 512
+    # 5G disk size granularity -> 2.5G sampling in 512 byte sectors
+    FREE_SECTOR_THRESHOLD = int(2.5 * (1<<30) / 512)
 
     def __init__(self, dev):
         self.dev = dev
 
     def ensure_gpt_consistency(self):
         sgdisk_out = subprocess.check_output([
-            'sgdisk', '-v', self.dev]).decode()
+            'sgdisk', '-v', self.dev], stderr=subprocess.PIPE).decode()
         if 'Problem: The secondary' in sgdisk_out:
             subprocess.check_call(['sgdisk', '-e', self.dev])
 
-    r_free = re.compile(r'\s([0-9]+) free sectors')
+    r_free1 = re.compile(r'largest of which is (\d+) \(.*\) in size')
+    r_free2 = re.compile(r'\s(\d+) free sectors')
 
     def free_sectors(self):
         sgdisk_out = subprocess.check_output([
-            'sgdisk', '-v', self.dev]).decode()
-        free = self.r_free.search(sgdisk_out)
+            'sgdisk', '-v', self.dev], stderr=subprocess.PIPE).decode()
+        free = self.r_free1.search(sgdisk_out)
+        if not free:
+            free = self.r_free2.search(sgdisk_out)
         if not free:
             raise RuntimeError('unable to determine number of free sectors',
                                sgdisk_out)
         return(int(free.group(1)))
 
+    def repartition(self, first_sector):
+        cmdline = [
+            'sgdisk', self.dev,
+            '-d', '1',
+            '-n', '1:{}:0'.format(first_sector),
+            '-c', '1:root',
+            '-t', '1:8300']
+        print(' '.join(cmdline))
+        subprocess.check_call(cmdline)
+
     def grow_partition(self):
-        partx = subprocess.check_output(['partx', '-r', self.dev]).decode()
-        for line in partx.splitlines():
-            (npart, first, _last, _sectors, _size, name, _uuid) = line.split()
-            if npart == '1' and first in ('4096', '8192') and name == 'root':
-                subprocess.check_call([
-                    'sgdisk', self.dev, '-d', '1',
-                    '-n', '1:{}:0'.format(first), '-c', '1:root',
-                    '-t', '1:8300'])
-                return
-        raise RuntimeError('Could not resize partition', partx)
+        partx = subprocess.check_output(['partx', '-rg', self.dev]).decode()
+        (_npart, first, _last, _sectors, _size, name, _uuid) = \
+            partx.splitlines()[0].split()
+        if first not in ('4096', '8192') or name != 'root':
+            raise RuntimeError('Failed to locate root partition', partx)
+        self.repartition(int(first))
 
-
-
-    def resize_partition(self):
-        partx = subprocess.check_output(['partx', '-r', self.dev]).decode()
-        partition_size = partx.splitlines()[1].split()[3]   # sectors
-        subprocess.check_call(['resizepart', self.dev, '1', partition_size])
+    def resize_filesystem(self):
+        print('Resizing filesystem')
+        partx = subprocess.check_output(['partx', '-rg', self.dev]).decode()
+        size = int(partx.splitlines()[0].split()[3])   # sectors
+        print('New size: {} GiB'.format(size * 512 / (1<<30)))
+        subprocess.check_call(['resizepart', self.dev, '1', str(size)])
         subprocess.check_call(['resize2fs', '{}1'.format(self.dev)])
 
     def grow(self):
         self.ensure_gpt_consistency()
         free = self.free_sectors()
         if free > self.FREE_SECTOR_THRESHOLD:
-            print('{} free sectors on {}, growing'.format(free, self.dev))
+            print('Resize: {} free sectors on {}'.format(free, self.dev))
             self.grow_partition()
-            self.resize_partition()
+            self.resize_filesystem()
 
 
 def check_grow():
