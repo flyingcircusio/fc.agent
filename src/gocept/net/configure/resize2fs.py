@@ -38,16 +38,16 @@ class Disk(object):
         return(int(free.group(1)))
 
     def grow_partition(self):
-        partx = subprocess.check_output(['partx', '-rg', self.dev]).decode()
+        partx = subprocess.check_output(['partx', '-r', self.dev]).decode()
         for line in partx.splitlines():
             (npart, first, _last, _sectors, _size, name, _uuid) = line.split()
-            if npart == '1' and name == 'root' and int(first) % 1024 == 0:
+            if npart == '1' and first in ('4096', '8192') and name == 'root':
                 subprocess.check_call([
                     'sgdisk', self.dev, '-d', '1',
                     '-n', '1:{}:0'.format(first), '-c', '1:root',
                     '-t', '1:8300'])
                 return
-        raise RuntimeError('failed to locate root partition', partx)
+        raise RuntimeError('Could not resize partition', partx)
 
 
 
