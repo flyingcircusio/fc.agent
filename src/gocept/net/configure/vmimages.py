@@ -13,7 +13,9 @@ import sys
 import tempfile
 import time
 
-HYDRA_BRANCH_URL = 'https://hydra.flyingcircus.io/channels/branches/{}'
+# The trailing slash is important at the moment as we'll otherwise get too
+# many redirects.
+HYDRA_BRANCH_URL = 'https://hydra.flyingcircus.io/channels/branches/{}/'
 RELEASES = ['fc-15.09-dev', 'fc-15.09-staging', 'fc-15.09-production']
 CEPH_CLIENT = socket.gethostname()
 LOCK_COOKIE = '{}.{}'.format(CEPH_CLIENT, os.getpid())
@@ -89,7 +91,7 @@ def delta_update(from_, to):
     changed blocks. Additionally, we use a stuttering technique to
     improve fairness.
     """
-    blocksize = 64 * 1024
+    blocksize = 4 * 1024 * 1024
     total = 0
     written = 0
     with open(from_, 'rb') as source:
@@ -104,8 +106,12 @@ def delta_update(from_, to):
                     dest.seek(-len(b), os.SEEK_CUR)
                     dest.write(a)
                     written += 1
-                time.sleep(1e-4)
-    logger.debug('delta_update: %d/%d 64k blocks updated (%d%%)',
+                    # 30 GiB image would take around 6 minutes to store
+                    time.sleep(0.05)
+                else:
+                    time.sleep(0.01)
+
+    logger.debug('delta_update: %d/%d 4MiB blocks updated (%d%%)',
         written, total, 100 * written / (max(total, 1)))
 
 
@@ -135,7 +141,7 @@ class BaseImage(object):
         # Ensure we have a lock - stop handling for this image
         # and clean up (exceptions in __enter__ do not automatically
         # cause __exit__ being called).
-        logger.debug('Locking image %s', self.image.name)
+        logger.debug('Locking image %s', self.branch)
         try:
             self.image.lock_exclusive(LOCK_COOKIE)
         except rbd.ImageBusy:
@@ -143,7 +149,7 @@ class BaseImage(object):
             try:
                 self.image.lock_exclusive(LOCK_COOKIE)
             except Exception:
-                logger.error('Could not lock image %s', self.image.name)
+                logger.error('Could not lock image %s', self.branch)
                 raise LockingError()
         except rbd.ImageExists:
             # _We_ locked the image. Proceed.
@@ -166,7 +172,7 @@ class BaseImage(object):
         if not l:
             return
         logger.debug('Examining lock on image %s (%r)',
-                     self.image.name, l)
+                     self.branch, l)
         client, cookie, _addr = l['lockers'][0]  # excl -> max one lock
         try:
             otherhost, otherpid = cookie.split('.', 1)
@@ -197,8 +203,9 @@ class BaseImage(object):
             HYDRA_BRANCH_URL.format(self.branch),
             allow_redirects=False)
         assert release.status_code in [301, 302], release.status_code
-        release_url = release.headers['Location']
+        release_url = release.headers['Location'].rstrip('/')
         release_id = p.basename(release_url)
+        assert release_id.startswith('nixos-')
         return release_id, release_url
 
     @property
@@ -233,6 +240,7 @@ class BaseImage(object):
                 raise RuntimeError('raw image is not of expected size',
                         size, expected_size)
             self.image.resize(size)
+            logger.debug('\t\tStoring changes ...')
             with self.mapped() as blockdev:
                 delta_update(bounce.name, blockdev)
 

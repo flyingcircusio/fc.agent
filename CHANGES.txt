@@ -4,7 +4,9 @@ Changelog
 1.10.5 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Adapt VM base image loading code to Ceph Jewel.
+
+- Fix VM base image loading for Hydra static channel compatibility.
 
 
 1.10.4 (2018-10-19)
