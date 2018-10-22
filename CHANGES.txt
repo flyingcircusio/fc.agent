@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.5 (unreleased)
+1.10.5 (2018-10-22)
 -------------------
 
 - Adapt VM base image loading code to Ceph Jewel.
