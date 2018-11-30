@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.6 (unreleased)
+1.10.6 (2018-11-30)
 -------------------
 
 - Additional logging in resize2fs (#107265).
