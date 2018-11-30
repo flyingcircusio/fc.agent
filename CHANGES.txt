@@ -4,7 +4,7 @@ Changelog
 1.10.6 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Additional logging in resize2fs (#107265).
 
 
 1.10.5 (2018-10-22)
