@@ -277,9 +277,10 @@ class ZonesTest(unittest.TestCase):
                          self.z.reverse_zones[ip.IPNetwork(
                              '2a02:248:101::/48')].records[0].value)
 
-    def test_add_reverse_fails_if_address_does_not_fit_any_zone(self):
-        with self.assertRaises(KeyError):
-            self.z.add_reverse(ip.IPAddress('192.0.1.2'), 'vm00')
+    def test_add_reverse_does_not_fail_when_address_does_not_fit_any_zone(self):
+        # We used to fail here but decided to not fail as that will
+        # (kinda silently) block DNS updates that people expect to see quickly.
+        self.z.add_reverse(ip.IPAddress('192.0.1.2'), 'vm00')
 
     def test_parse_only_one_nameserver_from_config(self):
         self.c['settings']['nameservers'] = 'ns1.gocept.com'
