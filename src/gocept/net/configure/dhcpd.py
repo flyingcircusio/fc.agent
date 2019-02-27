@@ -91,7 +91,7 @@ class NetworkFormatter(object):
     """Render a shared network containing subnets as string."""
 
     @staticmethod
-    def new(ipversion, sharednetwork, networkname, include_dir):
+    def new(ipversion, sharednetwork, networkname, include_dir=None):
         """Factory that creates suitable shared network formatter.
 
         `ipversion` is the IP protocol version. `sharednetwork` is the
@@ -104,7 +104,7 @@ class NetworkFormatter(object):
             return Network6Formatter(sharednetwork, networkname, include_dir)
         raise NotImplementedError('unsupported IP version', ipversion)
 
-    def __init__(self, sharednetwork, networkname, include_dir):
+    def __init__(self, sharednetwork, networkname, include_dir=None):
         self.sharednetwork = sharednetwork
         self.networkname = networkname
         self.include_dir = include_dir

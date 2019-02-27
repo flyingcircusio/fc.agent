@@ -1,5 +1,6 @@
 syntax: glob
 
+.pytest_cache
 .cache
 bin/
 dist

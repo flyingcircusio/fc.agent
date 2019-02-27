@@ -4,7 +4,9 @@ Changelog
 1.10.7 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Fix broken tests.
+
+- Fix DNS updates when no reverse Zone exists. (#107874)
 
 
 1.10.6 (2018-11-30)

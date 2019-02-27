@@ -261,7 +261,10 @@ class Zones(object):
             if addr in prefix:
                 self.reverse_zones[prefix].add_ptr(addr, name)
                 return
-        raise KeyError('no reverse zone found for address', addr)
+        # Do not fail here - reverse Zones are things that can be forgotten
+        # when setting up new networks and this then blocks updating all of
+        # our managed fcio.net authoritative DNS servers ...
+        # We rather run checks against that.
 
     def update_zones(self):
         """Updates all zone files in pridir.
