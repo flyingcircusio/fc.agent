@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.8 (unreleased)
+1.10.8 (2019-04-17)
 -------------------
 
 - Stop making backups for VMs in soft deletion stage. (#27020, #22345)
