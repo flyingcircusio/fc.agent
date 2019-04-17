@@ -141,4 +141,4 @@ def test_backy_dont_configure_deleted_nodes(backyenv, enc):
     enc.list_virtual_machines.return_value = vm_params([
         'node00', 'node01', 'node02', 'node03', 'node04'])
     b = BackyConfig('location', 'consul_acl_token')
-    assert set(b.job_config().keys()) == set(['node00', 'node01', 'node02'])
+    assert set(b.job_config().keys()) == set(['node00', 'node01'])

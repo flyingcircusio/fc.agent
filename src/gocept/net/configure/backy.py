@@ -101,7 +101,7 @@ class BackyConfig(object):
             name = vm['name']
             if vm['parameters'].get('backy_server') != self.hostname:
                 continue
-            if 'hard' in self.deletions.get(name, {'stages': []})['stages']:
+            if 'soft' in self.deletions.get(name, {'stages': []})['stages']:
                 continue
             schedule = vm['parameters'].get('backy_schedule', 'default')
             variant = None
