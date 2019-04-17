@@ -1,12 +1,20 @@
 Changelog
 =========
 
-1.10.7 (unreleased)
+1.10.8 (unreleased)
+-------------------
+
+- Stop making backups for VMs in soft deletion stage. (#27020, #22345)
+
+
+1.10.7 (2019-03-01)
 -------------------
 
 - Fix broken tests.
 
-- Fix DNS updates when no reverse Zone exists. (#107874)
+- Fix DNS updates when no reverse Zone exists (#107874).
+
+- Fix disk resize for root partitions starting at sector 16384 (#108528).
 
 
 1.10.6 (2018-11-30)

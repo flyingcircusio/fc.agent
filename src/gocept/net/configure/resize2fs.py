@@ -64,7 +64,7 @@ class Disk(object):
         partx = log_call(['partx', '-rg', self.dev])[0]
         (_npart, first, _last, _sectors, _size, name, _uuid) = \
             partx.splitlines()[0].split()
-        if first not in ('4096', '8192') or name != 'root':
+        if first not in ['4096', '8192', '16384'] or name != 'root':
             raise RuntimeError('Failed to locate root partition', partx)
         self.repartition(int(first))
 
