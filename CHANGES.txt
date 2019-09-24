@@ -4,7 +4,7 @@ Changelog
 1.10.9 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Fix parsing Qemu image sizes after Qemu upgrade, add test coverage. (#119236)
 
 
 1.10.8 (2019-04-17)

@@ -4,14 +4,22 @@ import logging
 import lz4.frame
 import os
 import os.path as p
-import rados
-import rbd
+import re
 import requests
 import socket
 import subprocess
 import sys
 import tempfile
 import time
+
+try:
+    import rados
+    import rbd
+except ImportError:
+    # Support testing where Ceph isn't available.
+    rados = None
+    rbd = None
+
 
 # The trailing slash is important at the moment as we'll otherwise get too
 # many redirects.
@@ -69,18 +77,21 @@ def download_image(release_url, filename):
             "Aborting.".format(image_hash, checksum))
 
 
-def qemu_image_size(image_file):
-    info = subprocess.check_output(
-        ['qemu-img', 'info', image_file])
-    for line in info.decode('ascii').splitlines():
+def _parse_qemu_image_size(output):
+    for line in output.splitlines():
         line = line.strip()
         if line.startswith('virtual size:'):
-            size = line.split()[3]
-            assert size.startswith('(')
-            size = int(size[1:])
+            m = re.search('\(([0-9]+) bytes\)', line)
+            size = int(m.groups(0)[0])
             break
     assert size > 0
     return size
+
+
+def qemu_image_size(image_file):
+    info = subprocess.check_output(
+        ['qemu-img', 'info', image_file])
+    return _parse_qemu_image_size(info.decode('ascii'))
 
 
 def delta_update(from_, to):
