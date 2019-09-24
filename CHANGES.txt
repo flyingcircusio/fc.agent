@@ -4,6 +4,8 @@ Changelog
 1.10.9 (unreleased)
 -------------------
 
+- Migrate project repository to Github.
+
 - Fix parsing Qemu image sizes after Qemu upgrade, add test coverage. (#119236)
 
 
