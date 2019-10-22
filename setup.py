@@ -29,7 +29,7 @@ setup(
         'pytest==3.0.3',
         'python-ldap==2.4.19',
         'pytz==2017.2',
-        'PyYaml==3.10',
+        'PyYaml==5.1',
         'requests==2.11.1',
         'setuptools',
         'six==1.10.0',
