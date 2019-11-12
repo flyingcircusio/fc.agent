@@ -26,7 +26,6 @@ setup(
         'lz4==1.1.0',
         'nagiosplugin==1.2.4',
         'netaddr==0.7.10',
-        'pytest==3.0.3',
         'python-ldap==2.4.19',
         'pytz==2017.2',
         'PyYaml==3.10',
@@ -35,6 +34,16 @@ setup(
         'six==1.10.0',
         'shortuuid==0.4.2',
     ],
+    extras_require={
+        'test': [
+            'freezegun>=0.3'
+            'mock>=3.0',
+            'pytest>=3.6',
+            'pytest-cov',
+            'pytest-runner>=2.11,<3dev',
+            'pytest-timeout',
+        ],
+    },
     entry_points={
         'console_scripts': [
             'list-maintenance = gocept.net.maintenance.script:list',
