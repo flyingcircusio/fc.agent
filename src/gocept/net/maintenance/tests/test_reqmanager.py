@@ -202,12 +202,14 @@ def test_runnable_requests(tmpdir):
                 req[3], req[4], req[1], req[0]]
 
 
-def test_execute_requests(tmpdir):
+def test_execute_requests(tmpdir, dir_fac):
     # Three requests: the first two are marked as due by the directory
     # scheduler. The first runs to completion, but the second exits with
     # TEMPFILE. The first request should be archived and processing should
     # be suspended after the second request. The third request should not
     # be touched.
+    directory = dir_fac.return_value
+    directory.mark_node_service_status = mock.Mock()
     with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
         with request_population(3, tmpdir) as (rm, req):
             req[0].starttime = datetime.datetime(
@@ -330,13 +332,10 @@ def log_run_snippets(monkeypatch):
     return run_snippets
 
 
-def test_execute_requests_stopped_by_prepare_scripts(tmpdir, log_run_snippets):
-    # Three requests: the first two are marked as due by the directory
-    # scheduler. The first runs to completion, but the second exits with
-    # TEMPFILE. The first request should be archived and processing should
-    # be suspended after the second request. The third request should not
-    # be touched.
-
+def test_execute_requests_stopped_by_prepare_scripts(
+        tmpdir, log_run_snippets, dir_fac):
+    directory = dir_fac.return_value
+    directory.mark_node_service_status = mock.Mock()
     with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
         with request_population(3, tmpdir) as (rm, req):
             rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 5)
@@ -355,13 +354,10 @@ def test_execute_requests_stopped_by_prepare_scripts(tmpdir, log_run_snippets):
         assert req[2].state == Request.PENDING
 
 
-def test_execute_requests_run_finish_scripts(tmpdir, log_run_snippets):
-    # Three requests: the first two are marked as due by the directory
-    # scheduler. The first runs to completion, but the second exits with
-    # TEMPFILE. The first request should be archived and processing should
-    # be suspended after the second request. The third request should not
-    # be touched.
-
+def test_execute_requests_run_finish_scripts(
+        tmpdir, log_run_snippets, dir_fac):
+    directory = dir_fac.return_value
+    directory.mark_node_service_status = mock.Mock()
     with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
         with request_population(3, tmpdir) as (rm, req):
             rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 0)
@@ -376,12 +372,9 @@ def test_execute_requests_run_finish_scripts(tmpdir, log_run_snippets):
 
 
 def test_execute_requests_does_not_run_finish_scripts_on_fail(
-        tmpdir, log_run_snippets):
-    # Three requests: the first two are marked as due by the directory
-    # scheduler. The first runs to completion, but the second exits with
-    # TEMPFILE. The first request should be archived and processing should
-    # be suspended after the second request. The third request should not
-    # be touched.
+        tmpdir, log_run_snippets, dir_fac):
+    directory = dir_fac.return_value
+    directory.mark_node_service_status = mock.Mock()
     with freezegun.freeze_time('2011-07-27 07:12:00', tz_offset=0):
         with request_population(3, tmpdir) as (rm, req):
             rm.PREPARE_SCRIPTS = generate_snippets(str(tmpdir / 'prepare'), 0)

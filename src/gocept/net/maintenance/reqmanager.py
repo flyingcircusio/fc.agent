@@ -12,7 +12,9 @@ import os
 import StringIO
 import subprocess
 import time
+import socket
 
+HOST = socket.gethostname()
 LOG = logging.getLogger(__name__)
 
 
@@ -247,6 +249,7 @@ class ReqManager(object):
                 for key in deleted_requests))
 
     @require_lock
+    @require_directory
     def execute_requests(self):
         """Process maintenance requests.
 
@@ -255,12 +258,14 @@ class ReqManager(object):
         """
         requests = list(self.runnable_requests())
         if requests:
+            self.directory.mark_node_service_status(HOST, False)
             try:
                 run_snippets(self.PREPARE_SCRIPTS)
             except RuntimeError as e:
                 LOG.warning('prepare scripts returned unsuccessfully, '
                             'not performing maintenance.')
                 LOG.debug('exception: %s', e)
+                self.directory.mark_node_service_status(HOST, True)
                 return
 
         # If we have requests, run the finish scripts. This may be toggled
@@ -280,6 +285,7 @@ class ReqManager(object):
                             request.uuid, state.upper())
         else:
             # All requests have been finished successfully.
+            self.directory.mark_node_service_status(HOST, True)
             try:
                 run_snippets(self.FINISH_SCRIPTS)
             except RuntimeError as e:

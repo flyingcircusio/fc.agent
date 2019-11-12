@@ -4,7 +4,8 @@ Changelog
 1.10.10 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Remove maintenance flag in directory if maintenance prepare scripts fail. This
+  reduces changes for VM migration deadlock (#120249).
 
 
 1.10.9 (2019-09-24)
