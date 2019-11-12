@@ -60,24 +60,45 @@ def test_backy_config(backyenv, directory):
         assert c.read() == """\
 # Managed by localconfig, don't edit
 
-global: {base-dir: /srv/backy, worker-limit: 3}
+global:
+  base-dir: /srv/backy
+  worker-limit: 3
 jobs:
   test01:
     schedule: default
-    source: {consul_acl_token: '123', full-always: false, image: test01.root, \
-pool: rbd.hdd,
-      type: flyingcircus, vm: test01}
+    source:
+      consul_acl_token: '123'
+      full-always: false
+      image: test01.root
+      pool: rbd.hdd
+      type: flyingcircus
+      vm: test01
 schedules:
   default:
-    daily: {interval: 1d, keep: 10}
-    monthly: {interval: 30d, keep: 4}
-    weekly: {interval: 7d, keep: 4}
+    daily:
+      interval: 1d
+      keep: 10
+    monthly:
+      interval: 30d
+      keep: 4
+    weekly:
+      interval: 7d
+      keep: 4
   frequent:
-    daily: {interval: 1d, keep: 10}
-    hourly: {interval: 1h, keep: 25}
-    monthly: {interval: 30d, keep: 4}
-    weekly: {interval: 7d, keep: 4}
+    daily:
+      interval: 1d
+      keep: 10
+    hourly:
+      interval: 1h
+      keep: 25
+    monthly:
+      interval: 30d
+      keep: 4
+    weekly:
+      interval: 7d
+      keep: 4
 """
+
 
 def test_backy_config_from_global(backyenv, directory):
     mock_enc(directory)
@@ -91,9 +112,11 @@ global: {worker-limit: 7}
         assert """\
 # Managed by localconfig, don't edit
 
-global: {worker-limit: 7}
+global:
+  worker-limit: 7
 jobs:
 """ in c.read()
+
 
 def test_backy_config_always_full(backyenv, directory):
     mock_enc(directory, 'default-full')
@@ -106,10 +129,15 @@ def test_backy_config_always_full(backyenv, directory):
         assert """\
   test01:
     schedule: default
-    source: {consul_acl_token: '123', full-always: true, image: test01.root, \
-pool: rbd.hdd,
-      type: flyingcircus, vm: test01}
+    source:
+      consul_acl_token: '123'
+      full-always: true
+      image: test01.root
+      pool: rbd.hdd
+      type: flyingcircus
+      vm: test01
 """ in c.read()
+
 
 def test_backy_remove_deleted_nodes(backyenv, directory):
     mock_enc(directory)
