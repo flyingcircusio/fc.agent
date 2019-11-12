@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.10 (unreleased)
+1.10.10 (2019-11-12)
 --------------------
 
 - Remove maintenance flag in directory if maintenance prepare scripts fail. This
