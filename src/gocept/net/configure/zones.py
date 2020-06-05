@@ -323,15 +323,15 @@ class NodeAddr(object):
     for each node.
     """
 
-    canonical_vlan = 'srv'
-
-    def __init__(self, name, vlan, loc, addr, production=True, reverse=None):
+    def __init__(self, name, vlan, loc, addr, production=True, reverse=None,
+                 canonical=False):
         self.name = name
         self.vlan = vlan
         self.loc = loc
         self.addr = addr
         self.production = production
         self.reverse = reverse
+        self.canonical = canonical
 
     @property
     def variants(self):
@@ -352,7 +352,7 @@ class NodeAddr(object):
     def inject_records(self, zones):
         """Implement naming policy."""
         for index, variant in enumerate(self.variants):
-            if self.vlan == self.canonical_vlan:
+            if self.canonical:
                 # e.g., vm00.{ipv4.,ipv6.,}gocept.net
                 # with alias vm00.srv.whq.{ipv4.,ipv6.,}gocept.net
                 default_name = join_dn(self.name, variant)
@@ -373,13 +373,23 @@ def walk(directory):
         shortname = node['name']
         location = node['parameters']['location']
         production = node['parameters']['production']
+        
+        # Choose the VLAN for the canonical name: SRV is preferable, but some
+        # devices only have MGMT and then we use that.
+        vlans = set(node['parameters']['interfaces'])
+        for v in ['srv', 'mgm']:
+            if v in vlans:
+                canonical_vlan = v
+                break
+
         # sort everything to keep stable ordering
         for vlan, params in sorted(node['parameters']['interfaces'].items()):
             for addresses in sorted(params['networks'].values()):
                 for addr in sorted(addresses):
                     reverse = node['parameters']['reverses'].get(addr)
                     yield NodeAddr(shortname, vlan, location,
-                                   ip.IPAddress(addr), production, reverse)
+                                   ip.IPAddress(addr), production, reverse,
+                                   canonical=(vlan == canonical_vlan))
 
 
 def update():

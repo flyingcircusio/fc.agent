@@ -4,7 +4,9 @@ Changelog
 1.10.11 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Use the `mgm` VLAN as the canonical name for nodes that do not have an
+  `srv VLAN (but always prefer SRV). This allows addressing switches and
+  similar devices in the infrastructure more easily.
 
 
 1.10.10 (2019-11-12)
