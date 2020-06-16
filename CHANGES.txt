@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10.11 (unreleased)
+1.10.11 (2020-06-16)
 --------------------
 
 - Use the `mgm` VLAN as the canonical name for nodes that do not have an
