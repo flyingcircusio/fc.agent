@@ -18,3 +18,4 @@ local
 pip-selfcheck.json
 share/
 tags
+pyvenv.cfg
