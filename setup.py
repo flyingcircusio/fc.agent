@@ -28,7 +28,7 @@ setup(
         'netaddr==0.7.10',
         'python-ldap==2.4.19',
         'pytz==2017.2',
-        'PyYaml==5.1',
+        'PyYaml==5.3.1',
         'requests==2.11.1',
         'setuptools',
         'six==1.10.0',

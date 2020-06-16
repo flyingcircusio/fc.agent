@@ -4,7 +4,8 @@ Changelog
 1.10.12 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Fix brown bag release: fully pinned versions in setup.py means we're juggling
+  with the specific versions we have available on the platform.
 
 
 1.10.11 (2020-06-16)
