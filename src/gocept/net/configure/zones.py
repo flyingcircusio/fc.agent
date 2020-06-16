@@ -376,6 +376,7 @@ def walk(directory):
         
         # Choose the VLAN for the canonical name: SRV is preferable, but some
         # devices only have MGMT and then we use that.
+        canonical_vlan = None
         vlans = set(node['parameters']['interfaces'])
         for v in ['srv', 'mgm']:
             if v in vlans:

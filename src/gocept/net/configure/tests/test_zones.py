@@ -332,12 +332,14 @@ zone "gocept.net" IN {
                          self.z.internal_forward.include)
 
     def test_end_to_end(self):
-        def node(name, mgm, srv, id):
+        def node(name, mgm, srv, fe, id):
             interfaces = {}
             if mgm:
                 interfaces['mgm'] = {'networks': {'172.16.1.0/24': ['172.16.1.%s' % id]}}
             if srv:
-                interfaces['srv'] = {'networks': {'172.16.1.0/24': ['172.16.3.%s' % id]}}
+                interfaces['srv'] = {'networks': {'172.16.3.0/24': ['172.16.3.%s' % id]}}
+            if fe:
+                interfaces['fe'] = {'networks': {'172.16.2.0/24': ['172.16.2.%s' % id]}}
             return dict(name=name, parameters={
                 'location': 'rzob',
                 'interfaces': interfaces,
@@ -346,10 +348,10 @@ zone "gocept.net" IN {
 
         class DummyDirectory(object):
             def list_nodes(self):
-                return [node('switch', mgm=True, srv=False, id=5),
-                        node('vm', mgm=False, srv=True, id=6),
-                        node('server', mgm=True, srv=True, id=7),
-                        node('dummy', mgm=False, srv=False, id=8)]
+                return [node('dummy', mgm=False, srv=False, fe=True, id=8),
+                        node('switch', mgm=True, srv=False, fe=False, id=5),
+                        node('vm', mgm=False, srv=True, fe=False, id=6),
+                        node('server', mgm=True, srv=True, fe=False, id=7)]
 
         directory = DummyDirectory()
 
@@ -388,6 +390,8 @@ $ORIGIN gocept.net.
                                 NS      ns1.gocept.net.
                                 NS      ns2.gocept.net.
 $TTL 7200
+dummy.fe.rzob                   A       172.16.2.8
+dummy.fe.rzob.ipv4              A       172.16.2.8
 server                          A       172.16.3.7
 server.ipv4                     A       172.16.3.7
 server.mgm.rzob                 A       172.16.1.7
